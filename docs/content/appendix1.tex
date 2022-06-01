@@ -1,0 +1,304 @@
+\section*{Приложение А}
+\addcontentsline{toc}{section}{Приложение А}
+
+\begin{center}
+    \textbf{Coding Style}
+\end{center}
+
+\section*{C}
+
+В сторонних проектах с собственным описанным стилем оформления кода следует придерживаться правил этого стиля:
+\begin{itemize}
+    \item U-Boot: \url{https://www.denx.de/wiki/U-Boot/CodingStyle}
+    \item Linux: \url{https://www.kernel.org/doc/html/v4.10/process/coding-style.html}
+\end{itemize}
+
+\linespace
+
+В сторонних проектах без описанного стиля следует оформлять наш код по аналогии с остальными исходниками проекта.
+
+\linespace
+
+В наших собственных проектах за основу взят стиль, принятый в linux с некоторыми изменениями.
+
+\subsection*{Отступы}
+
+В качестве отступа используется один таб шириной в четыре пробела.
+\begin{lstlisting}[language=C]
+int main(void)
+{
+    int a = 0;
+    return a;
+}
+\end{lstlisting}
+
+Лишние табы и пробелы в конце строк следует удалять.
+
+\subsection*{Длина строк}
+
+Следует избегать превышения ограничения в 80 символов на строку. Если выражение не помещается в 80 символов, его следует разделить на части. При этом желательно, чтобы каждый аргумент функции находился в отдельной строке. Пример:
+\begin{lstlisting}[language=C]
+return_code = my_structure->callback_with_arguments(argument_number_1,
+                                                         argument_number_2);
+\end{lstlisting}
+
+Строки, выводимые программой на экран, не следует сокращать при превышении ими ограничения.
+
+\subsection*{Скобки}
+
+В условиях, циклах и объявлениях структур открывающая фигурная скобка не переносится на следующую строку. Закрывающая переносится:
+\begin{lstlisting}[language=C]
+while (a > b) {
+    a--;
+    b++;
+    if (a == b) {
+        do_something();
+    }
+}
+\end{lstlisting}
+
+Закрывающая фигурная скобка располагается на том же уровне отступов, что и начало всей конструкции.
+
+\linespace
+
+В объявлениях функций открывающая фигурная скобка переносится на следующую строку:
+\begin{lstlisting}[language=C]
+int main(int argc, char **argv)
+{
+    return 0;
+}
+\end{lstlisting}
+
+В условиях и циклах перед открывающей круглой скобкой ставится пробел. После закрывающей скобки ставится пробел:
+
+\newpage
+
+\begin{lstlisting}[language=C]
+if (a == 0) {
+    return a;
+}
+\end{lstlisting}
+
+Фигурные скобки должны присутствовать даже если в блоке всего одно выражение.
+
+\subsection*{Пробелы}
+
+Бинарные и тернарные операторы окружаются пробелами:
+\begin{lstlisting}[language=C]
+= + - < > * / % | & ^ <= >= == != ? :
+\end{lstlisting}
+
+После унарных операторов не ставится пробел:
+\begin{lstlisting}[language=C]
+& * + - ~ ! sizeof typeof alignof __attribute__ defined
+\end{lstlisting}
+
+Пробел не ставится после префиксных инкремента и декремента:
+\begin{lstlisting}[language=C]
+++i
+--i
+\end{lstlisting}
+и перед постфиксными:
+\begin{lstlisting}[language=C]
+i++
+i--
+\end{lstlisting}
+
+Пробелы не ставятся вокруг операторов структур:
+\begin{lstlisting}[language=C]
+my_struct.element
+my_struct->element
+\end{lstlisting}
+
+При объявлении указателя оператор \verb|*| идет перед именем указателя, а не после его типа:
+\begin{lstlisting}[language=C]
+void *buffer
+\end{lstlisting}
+
+\subsection*{Имена и объявления}
+В именовании функций, переменных и типов используется \textit{snake\_case}. Примеры:
+\begin{lstlisting}[language=C]
+void my_function(int my_argument);
+struct my_struct *s;
+\end{lstlisting}
+
+В именах желательно стараться избегать сокращений, из-за которых становится не ясно назначение сущности. Например, вместо \textbf{dctl()} использовать более полное имя \textbf{device\_control()}.
+
+\linespace
+
+Объявлять переменные в функции желательно рядом с выражениями, их использующими, если функция достаточно длинная (от 10 строк), либо в начале функции, если короткая (до 10 строк). Например, переменную-счётчик для цикла for следует объявлять так:
+\begin{lstlisting}[language=C]
+for (int i = 0; i < 3; ++i) {
+    actions();
+}
+\end{lstlisting}
+
+Также нужно следить за количеством переменных в одной функции. Если их число превышает пять, то следует задуматься о декомпозиции функции.
+
+\subsection*{Функции}
+
+Функции должны быть как можно короче и выполнять как можно меньше действий. Длинные функции следует разбивать на подфункции, действия внутри которых связаны по смыслу. Пример:
+\begin{lstlisting}[language=C]
+int collect_data_and_calculate_result(struct program_context *c)
+{
+    void *data = collect_data(c);
+
+    return calculate_result(data);
+}
+
+int init_and_run_program(struct arguments *a){
+    struct program_context *c = init_context(a);
+
+    return collect_data_and_calculate_result(c);
+}
+\end{lstlisting}
+
+\subsection*{Структуры перечисления}
+
+Их объявления должны выглядеть следующим образом.
+
+Структуры только с именем:
+\begin{lstlisting}[language=C]
+struct my_struct_name {
+    int i;
+    int j;
+    void *buffer;
+};
+\end{lstlisting}
+
+Структуры с typedef должны иметь суффикс \_t в имени типа:
+\begin{lstlisting}[language=C]
+typedef struct my_struct {
+    int i;
+    int j;
+    void *buffer;
+} my_struct_t;
+\end{lstlisting}
+
+Перечисление объявляются аналогичным образом. Все варианты перечисления должны именоваться в верхнем регистре:
+\begin{lstlisting}[language=C]
+typedef enum {
+    ADDRESS_7BIT,
+    ADDRESS_10BIT,
+} addressing_mode_t;
+\end{lstlisting}
+
+\subsection*{Макросы}
+Желательно избегать написания макросов. Особенно вложенных, так как это приводит к сложностям в отладке.
+
+\linespace
+
+Макросы именуются с использованием только верхнего регистра. Макрос и отдельно его входные параметры должны быть окружены круглыми скобками:
+\begin{lstlisting}[language=C]
+#define MIN(x, y)       ((x) < (y) ? (x) : (y))
+\end{lstlisting}
+
+Макросы с несколькими выражениями должны быть заключены в блок \verb|do {} while(0)|:
+\begin{lstlisting}[language=C]
+#define DO_ACTION(a, b)                                 \
+                    do {                                \
+                        if (do_first(a) >= 0) {         \
+                        do_next(b);                     \
+                        }                               \
+                    } while(0)                          \
+\end{lstlisting}
+
+\subsection*{Использование goto}
+
+\verb|goto| можно использовать для обработки ошибок. Переходя должны осуществляться только в пределах одной функции. Пример:
+\begin{lstlisting}[language=C]
+int configure_device(void)
+{
+    int ret = 0;
+    struct my_device *d = malloc(sizeof(my_device));
+    if (!d) {
+        return -ENOMEM;
+    }
+
+    ret = init_stage_first(d);
+    if (ret != 0) {
+        goto err_free;
+    }
+    
+    ret = init_stage_last(d);
+    if (ret != 0) {
+        goto err_free;
+    }
+
+    return 0;
+
+err_deinit:
+    deinit_stage_first(d);
+err_free:
+    free(d);
+    return ret;
+}
+\end{lstlisting}
+
+\subsection*{Комментарии}
+
+Комментарии следует использовать только в качестве документации и для пояснения каких-то не очевидных специфичных случаев.
+
+\subsubsection*{Функции}
+
+Документировать следует функции, поведение, входные и выходные параметры которые не очевидны. Пример:
+\begin{lstlisting}[language=C]
+/*
+ * Configures an I2C bus.
+ *
+ * addr_lenght should be ADDRESS_7BIT or ADDRESS_10BIT.
+ * speed should be SPEED_100MHZ or SPEED_400MHZ.*
+ * Returns 0 on success, -1 otherwise.
+ */
+int configure_i2c_bus(int bus_number, int addr_length, int speed)
+\end{lstlisting}
+
+Не следует документировать очевидные функции. Например, в достаточно очевидны назначение и принцип работы функции. Пример:
+\begin{lstlisting}[language=C]
+int sum_int(int a, int b)
+{
+    return a + b;
+}
+\end{lstlisting}
+
+\subsubsection*{Магические числа}
+
+Если назначение числового значения не очевидно из имени переменной или макроса, которым оно присваивается, то это значение следует снабдить комментарием. Пример:
+
+\begin{lstlisting}[language=C]
+#define DEVICE_CONTROL_REGISTER_ADDR 0x4
+/* Set required device mode on startup. See device datasheet page 100, table 20. */
+#define DONTROL_REGISTER_DATA 0x4f7a
+\end{lstlisting}
+
+\subsection*{Заголовочные файлы}
+
+Должны обязательно содержать защиту от повторного включения:
+\begin{lstlisting}[language=C]
+#ifndef MY_HEADER_H
+#define MY_HEADER_H
+All the contents of the header file here
+#endif
+\end{lstlisting}
+
+либо
+
+\begin{lstlisting}[language=C]
+#pragma once
+Content
+\end{lstlisting}
+
+Содержимое может включать:
+\begin{itemize}
+    \item дополнительные \verb|include|
+    \item объявление макросов
+    \item объявление констант
+    \item прототипы функций
+\end{itemize}
+
+но реализации функций должны содержаться только в файлах \verb|.c|
+
+\newpage
+
+\section*{Python}
+См. \url{https://peps.python.org/pep-0008/}

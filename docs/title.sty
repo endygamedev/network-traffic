@@ -1,0 +1,46 @@
+\ProvidesPackage{title}
+
+
+\newcommand\insertdate{<<\underline{\quad}>> \, \underline{\qquad\qquad} \number\year г.}
+\renewcommand*{\maketitle}{%
+\begin{titlepage}
+
+\centering
+\setstretch{0.8} 
+
+\tikz [remember picture, overlay] %
+\node [shift={(1.5cm,-1.5cm)}] at (current page.north west) %
+[anchor=north west] %
+{\includegraphics[scale=0.15]{../assets/logo.png}};
+
+
+\vspace{4em}
+
+\textbf{<<Научно-технический центр Метротек>>}
+
+\vspace{15em}
+
+\textbf{Лабораторная работа №1}
+
+\vspace{0.5em}
+
+Тема: Сбор статистики по сетевому трафику
+
+\vspace{8em}
+
+\begin{flushleft}
+Стажёр: Бронников Егор Игоревич\\
+\vspace{0.5em}
+\href{mailto:bronnikov.40@mail.ru}{<bronnikov.40@mail.ru>}\\
+\href{https://t.me/endygamedev}{<t.me/endygamedev>}
+\end{flushleft}
+
+\vfill
+
+Санкт-Петербург \\
+\vspace{0.25cm}
+\number\year
+\clearpage
+\end{titlepage}
+}
+\endinput

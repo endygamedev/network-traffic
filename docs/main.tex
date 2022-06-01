@@ -1,0 +1,53 @@
+\documentclass{metrotek}
+\usepackage{title}
+
+
+\begin{document}
+
+\regtotcounter{page}
+
+% Титульник
+\maketitle
+
+\newpage
+
+% Содержание
+\setcounter{page}{2}
+\tableofcontents
+
+\newpage
+
+% Задача
+\import{content/}{task.tex}
+
+\newpage
+
+% Описание
+\import{content/}{section1.tex}
+
+\newpage
+
+% Сборка
+\import{content/}{section2.tex}
+
+\newpage
+
+% Запуск
+\import{content/}{section3.tex}
+
+\newpage
+
+% Профилирование
+\import{content/}{section4.tex}
+
+\newpage
+
+% Авторство и лицензия
+\import{content/}{section5.tex}
+
+\newpage
+
+% Приложение А. Coding Style
+\import{content/}{appendix1.tex}
+
+\end{document}
