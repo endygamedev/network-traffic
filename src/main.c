@@ -6,15 +6,15 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
-#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include "main.h"
 
-#define BITS 65536
+/* Maximum number of bytes to accept from the message */
+#define BYTES 65536
 
 
-FILE *log_txt;
-int total, tcp, udp, icmp, igmp, other, iphdrlen;
+FILE *logfile;
+int total, udp, other, iphdrlen;
 
 
 struct sockaddr saddr;
@@ -25,58 +25,64 @@ int main(void)
 {
     int sock_r, saddr_len, buflen;
 
-    unsigned char *buffer = (unsigned char *)malloc(BITS);
-    memset(buffer, 0, BITS);
+    unsigned char *buffer = (unsigned char *)malloc(BYTES);
+    memset(buffer, 0, BYTES);
 
-    log_txt = fopen("log.txt", "w");
+    logfile = fopen("log", "w");
 
-    if (!log_txt) {
-        printf("Unable to open log.txt\n");
+    if (!logfile) {
+        fprintf(stderr, "Error: Unable to open log file\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("Scanning ...\n");
+    fprintf(stdout, "Scanning ...\n");
 
     sock_r = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-
+    
     if (sock_r < 0) {
-        printf("Error in socket\n");
+        fprintf(stderr, "Error: Can't open socket\n");
         exit(EXIT_FAILURE);
     }
 
     while (1) {
         saddr_len = sizeof(saddr);
-        buflen = recvfrom(sock_r, buffer, BITS, 0, &saddr, (socklen_t *)&saddr_len);
+        buflen = recvfrom(sock_r, buffer, BYTES, 0, &saddr, (socklen_t *)&saddr_len);
 
         if (buflen < 0) {
-            printf("Error in reading recvfrom function\n");
+            fprintf(stderr, "Error: Error while reading recvfrom function\n");
             exit(EXIT_FAILURE);
         }
 
-        fflush(log_txt);
+        fflush(logfile);
         data_process(buffer, buflen);
     }
 
     close(sock_r);
+    fclose(logfile);
 
     return EXIT_SUCCESS;
 }
 
 
+/*
+ * Recieve data from OSI L2 and write it to log file.
+ */
 void ethernet_header(unsigned char *buffer)
 {
     struct ethhdr *eth = (struct ethhdr *)(buffer);
-    fprintf(log_txt, "\nEthernet Header\n");
-    fprintf(log_txt, "\t|-Source Address: %.2X-%.2X-%.2X-%.2X-%.2X-%.2x",
+    fprintf(logfile, "\nEthernet Header\n");
+    fprintf(logfile, "\t|-Source Address: %.2X-%.2X-%.2X-%.2X-%.2X-%.2x\n",
                         eth->h_source[0], eth->h_source[1], eth->h_source[2],
                         eth->h_source[3], eth->h_source[4], eth->h_source[5]);
-    fprintf(log_txt, "\t|-Destination Address: %.2X-%.2X-%.2X-%.2X-%.2X-%.2x",
+    fprintf(logfile, "\t|-Destination Address: %.2X-%.2X-%.2X-%.2X-%.2X-%.2x",
                         eth->h_dest[0], eth->h_dest[1], eth->h_dest[2],
                         eth->h_dest[3], eth->h_dest[4], eth->h_dest[5]);
-    fprintf(log_txt, "\t|-Protocol: %d\n", eth->h_proto);
 }
 
 
+/*
+ * Recieve data from OSI L3 and write it to log file.
+ */
 void ip_header(unsigned char *buffer)
 {
     struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
@@ -87,103 +93,73 @@ void ip_header(unsigned char *buffer)
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = ip->daddr;
 
-    fprintf(log_txt, "\nIP Header\n");
+    fprintf(logfile, "\nIP Header\n");
 
-    fprintf(log_txt, "\t|-Version: %d\n", (unsigned int)ip->version);
-    fprintf(log_txt, "\t|-Internet Header Length: %d DWORDS or %d Bytes\n",
+    fprintf(logfile, "\t|-Version: %d\n", (unsigned int)ip->version);
+    fprintf(logfile, "\t|-Internet Header Length: %d DWORDS or %d Bytes\n",
                         (unsigned int)ip->ihl, ((unsigned int)(ip->ihl))*4);
-    fprintf(log_txt, "\t|-Type Of Service: %d\n", (unsigned int)ip->tos);
-    fprintf(log_txt, "\t|-Total Length: %d\n", ntohs(ip->tot_len));
-    fprintf(log_txt, "\t|-Identification: %d\n", ntohs(ip->id));
-    fprintf(log_txt, "\t|-Time To Live: %d\n", (unsigned int)ip->ttl);
-    fprintf(log_txt, "\t|-Protocol: %d\n", (unsigned int)ip->protocol);
-    fprintf(log_txt, "\t|-Header Checksum: %d\n", ntohs(ip->check));
-    fprintf(log_txt, "\t|-Source IP: %s\n", inet_ntoa(source.sin_addr));
-    fprintf(log_txt, "\t|-Destination IP: %s\n", inet_ntoa(dest.sin_addr));
+    fprintf(logfile, "\t|-Type Of Service: %d\n", (unsigned int)ip->tos);
+    fprintf(logfile, "\t|-Total Length: %d\n", ntohs(ip->tot_len));
+    fprintf(logfile, "\t|-Identification: %d\n", ntohs(ip->id));
+    fprintf(logfile, "\t|-Time To Live: %d\n", (unsigned int)ip->ttl);
+    fprintf(logfile, "\t|-Protocol: %d\n", (unsigned int)ip->protocol);
+    fprintf(logfile, "\t|-Header Checksum: %d\n", ntohs(ip->check));
+    fprintf(logfile, "\t|-Source IP: %s\n", inet_ntoa(source.sin_addr));
+    fprintf(logfile, "\t|-Destination IP: %s\n", inet_ntoa(dest.sin_addr));
 }
 
 
+/*
+ * Takes data from the UDP datagram and writes it to the log file.
+ * */
 void payload(unsigned char *buffer, int buflen)
 {
     unsigned char *data = (buffer + iphdrlen + sizeof(struct ethhdr) + sizeof(struct udphdr));
-    fprintf(log_txt, "\nData\n");
+    fprintf(logfile, "\nData\n");
     int remaining_data = buflen - (iphdrlen + sizeof(struct ethhdr) + sizeof(struct udphdr));
     for (int i = 0; i < remaining_data; i++) {
         if (i != 0 && i % 16 == 0) {
-            fprintf(log_txt, "\n");
+            fprintf(logfile, "\n");
         }
-        fprintf(log_txt, "%.2X", data[i]);
+        fprintf(logfile, "%.2X", data[i]);
     }
-    fprintf(log_txt, "\n");
+    fprintf(logfile, "\n");
 }
 
 
-void tcp_header(unsigned char *buffer, int buflen)
-{
-    fprintf(log_txt, "\n*******************TCP Packet*******************");
-    ethernet_header(buffer);
-    ip_header(buffer);
-
-    struct tcphdr *tcp = (struct tcphdr*)(buffer + iphdrlen + sizeof(struct ethhdr));
-    fprintf(log_txt, "\nTCP Header\n");
-    fprintf(log_txt, "\t|-Source Port: %u\n", ntohs(tcp->source));
-    fprintf(log_txt, "\t|-Destination Port: %u\n", ntohs(tcp->dest));
-    fprintf(log_txt, "\t|-Sequence Number: %u\n", ntohl(tcp->seq));
-    fprintf(log_txt, "\t|-Acknowledge Number: %u\n", ntohl(tcp->ack_seq));
-    fprintf(log_txt, "\t|-Header Length: %d DWORDS or %d BYTES\n",
-                        (unsigned int)tcp->doff, (unsigned int)tcp->doff*4);
-    fprintf(log_txt, "\t|-------Flags-------\n");
-    fprintf(log_txt, "\t\t|-Urgent Flag: %d\n", (unsigned int)tcp->urg);
-    fprintf(log_txt, "\t\t|-Acknowledgement Flag: %d\n", (unsigned int)tcp->ack);
-    fprintf(log_txt, "\t\t|-Push Flag: %d\n", (unsigned int)tcp->psh);
-    fprintf(log_txt, "\t\t|-Reset Flag: %d\n", (unsigned int)tcp->rst);
-    fprintf(log_txt, "\t\t|-Synchronise Flag: %d\n", (unsigned int)tcp->syn);
-    fprintf(log_txt, "\t\t|-Finish Flag: %d\n", (unsigned int)tcp->fin);
-    fprintf(log_txt, "\t|-Window size: %d\n", ntohs(tcp->window));
-    fprintf(log_txt, "\t|-Checksum: %d\n", ntohs(tcp->check));
-    fprintf(log_txt, "\t|-Urgent Pointer: %d\n", tcp->urg_ptr);
-
-    payload(buffer, buflen);
-
-    fprintf(log_txt, "************************************************\n\n\n");
-}
-
-
+/*
+ * Recieve data from OSI L4 and write it to log file.
+ */
 void udp_header(unsigned char *buffer, int buflen)
 {
-    fprintf(log_txt, "\n*******************UDP Packet********************");
+    fprintf(logfile, "\n*******************UDP Packet********************");
 
     ethernet_header(buffer);
     ip_header(buffer);
-    fprintf(log_txt, "\nUDP Header\n");
+    fprintf(logfile, "\nUDP Header\n");
 
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
-    fprintf(log_txt, "\t|-Source Port: %d\n", ntohs(udp->source));
-    fprintf(log_txt, "\t|-Destination Port: %d\n", ntohs(udp->dest));
-    fprintf(log_txt, "\t|-UDP Length: %d\n", ntohs(udp->len));
-    fprintf(log_txt, "\t|-UDP Checksum: %d\n", ntohs(udp->check));
+    fprintf(logfile, "\t|-Source Port: %d\n", ntohs(udp->source));
+    fprintf(logfile, "\t|-Destination Port: %d\n", ntohs(udp->dest));
+    fprintf(logfile, "\t|-UDP Length: %d\n", ntohs(udp->len));
+    fprintf(logfile, "\t|-UDP Checksum: %d\n", ntohs(udp->check));
 
     payload(buffer, buflen);
 
-    fprintf(log_txt, "************************************************\n\n\n");
+    fprintf(logfile, "************************************************\n\n\n");
 }
 
 
+/*
+ * Sniffs all packets that arrive on a given network interface and takes only UDP.
+ * */
 void data_process(unsigned char *buffer, int buflen)
 {
     struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
     ++total;
 
-    /* cat /etc/protocols | grep -e UDP -e TCP
-     * tcp - 6
-     * udp - 17
-     * */
     switch (ip->protocol) {
-        case 6:
-            ++tcp;
-            tcp_header(buffer, buflen);
-            break;
-        case 17:
+        case 17:            /* ID number for UDP protocol in /etc/protocols */
             ++udp;
             udp_header(buffer, buflen);
             break;
@@ -191,6 +167,5 @@ void data_process(unsigned char *buffer, int buflen)
             ++other;
     }
 
-    printf("TCP: %d \t UDP: %d \t Other: %d \t Total: %d \r", tcp, udp, other,
-                                                                        total);
+    printf("UDP: %d Other: %d Total: %d \r", udp, other, total);
 }
