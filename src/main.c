@@ -13,17 +13,65 @@
 #define BYTES 65536
 
 
+struct correct_packets {
+    char *ip_source;
+    char *ip_dest;
+    int port_source;
+    int port_dest;
+};
+
 FILE *logfile;
 int total, udp, other, iphdrlen;
 
-
 struct sockaddr saddr;
 struct sockaddr_in source, dest;
+struct correct_packets cp;
 
 
-int main(void)
+int main(int argc, char *argv[])
 {
     int sock_r, saddr_len, buflen;
+
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp("--ip_source", argv[i]) || !strcmp("-ips", argv[i])) {
+            cp.ip_source = argv[++i];
+            continue;
+        }
+
+        if (!strcmp("--ip_dest", argv[i]) || !strcmp("-ipd", argv[i])) {
+            cp.ip_dest = argv[++i];
+            continue;
+        }
+
+        if (!strcmp("--port_source", argv[i]) || !strcmp("-ps", argv[i])) {
+            if (is_number(argv[++i])) {
+                cp.port_source = atoi(argv[i]);
+                continue;
+            } else {
+                fprintf(stderr, "Error: Ivalid --port_source parameter\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        if (!strcmp("--port_dest", argv[i]) || !strcmp("-pd", argv[i])) {
+            if (is_number(argv[++i])) {
+                cp.port_dest = atoi(argv[++i]);
+                continue;
+            } else {
+                fprintf(stderr, "Error: Invalid --port_dest parameter\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+    
+    printf("|-FILTER:\n");
+    printf("|-%s\n", cp.ip_source);
+    printf("|-%s\n", cp.ip_dest);
+    printf("|-%d\n", cp.port_source);
+    printf("|-%d\n", cp.port_dest);
+
+    check_ip_record(cp.ip_source);
+    check_ip_record(cp.ip_dest);
 
     unsigned char *buffer = (unsigned char *)malloc(BYTES);
     memset(buffer, 0, BYTES);
@@ -92,7 +140,10 @@ void ip_header(unsigned char *buffer)
     source.sin_addr.s_addr = ip->saddr;
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = ip->daddr;
-
+    
+    // TODO:
+    // Check if cp.ip_source and cp.ip_dest != NULL and if they correct
+    
     fprintf(logfile, "\nIP Header\n");
 
     fprintf(logfile, "\t|-Version: %d\n", (unsigned int)ip->version);
@@ -124,6 +175,7 @@ void payload(unsigned char *buffer, int buflen)
         fprintf(logfile, "%.2X", data[i]);
     }
     fprintf(logfile, "\n");
+    fprintf(logfile, "|-Remaining Data: %d\n", remaining_data);
 }
 
 
@@ -138,6 +190,9 @@ void udp_header(unsigned char *buffer, int buflen)
     ip_header(buffer);
     fprintf(logfile, "\nUDP Header\n");
 
+    // TODO:
+    // Check if cp.port_source and cp.port_dest != NULL and if they correct
+    
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
     fprintf(logfile, "\t|-Source Port: %d\n", ntohs(udp->source));
     fprintf(logfile, "\t|-Destination Port: %d\n", ntohs(udp->dest));

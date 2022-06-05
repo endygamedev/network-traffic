@@ -1,11 +1,12 @@
-NAME=main
+MAIN=main
+BASIC=basic
 LOG=log
 CC_FLAGS=-std=gnu99 -Wall -Wpedantic -Wextra -Werror
 CC=gcc
 
-all:
-	$(CC) $(CC_FLAGS) $(NAME).c -o $(NAME)
+all: $(BASIC).c
+	$(CC) $(CC_FLAGS) $(BASIC).c $(MAIN).c -o $(MAIN)
 
 clean:
-	rm -f $(NAME)
+	rm -f $(MAIN)
 	rm -f $(LOG)
