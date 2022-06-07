@@ -31,6 +31,11 @@ struct correct_packets cp;
 int main(int argc, char *argv[])
 {
     int sock_r, saddr_len, buflen;
+    
+    cp.ip_source = "";
+    cp.ip_dest = "";
+    cp.port_source = -1;
+    cp.port_dest = -1;
 
     for (int i = 1; i < argc; i++) {
         if (!strcmp("--ip_source", argv[i]) || !strcmp("-ips", argv[i])) {
@@ -55,7 +60,7 @@ int main(int argc, char *argv[])
 
         if (!strcmp("--port_dest", argv[i]) || !strcmp("-pd", argv[i])) {
             if (is_number(argv[++i])) {
-                cp.port_dest = atoi(argv[++i]);
+                cp.port_dest = atoi(argv[i]);
                 continue;
             } else {
                 fprintf(stderr, "Error: Invalid --port_dest parameter\n");
@@ -72,6 +77,8 @@ int main(int argc, char *argv[])
 
     check_ip_record(cp.ip_source);
     check_ip_record(cp.ip_dest);
+    check_port(cp.port_source);
+    check_port(cp.port_dest);
 
     unsigned char *buffer = (unsigned char *)malloc(BYTES);
     memset(buffer, 0, BYTES);
@@ -102,7 +109,7 @@ int main(int argc, char *argv[])
         }
 
         fflush(logfile);
-        data_process(buffer, buflen);
+        data_process(buffer);
     }
 
     close(sock_r);
@@ -113,26 +120,9 @@ int main(int argc, char *argv[])
 
 
 /*
- * Recieve data from OSI L2 and write it to log file.
- */
-void ethernet_header(unsigned char *buffer)
-{
-    struct ethhdr *eth = (struct ethhdr *)(buffer);
-    fprintf(logfile, "\nEthernet Header\n");
-    fprintf(logfile, "\t|-Source Address: %.2X-%.2X-%.2X-%.2X-%.2X-%.2x\n",
-                        eth->h_source[0], eth->h_source[1], eth->h_source[2],
-                        eth->h_source[3], eth->h_source[4], eth->h_source[5]);
-    fprintf(logfile, "\t|-Destination Address: %.2X-%.2X-%.2X-%.2X-%.2X-%.2x",
-                        eth->h_dest[0], eth->h_dest[1], eth->h_dest[2],
-                        eth->h_dest[3], eth->h_dest[4], eth->h_dest[5]);
-}
-
-
-/*
- * Recieve data from OSI L3 and write it to log file.
- */
-void ip_header(unsigned char *buffer)
-{
+ * Writes information about filtered packets into the log file.
+ * */
+void packet_information(unsigned char *buffer) {
     struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
     iphdrlen = ip->ihl*4;
 
@@ -141,74 +131,42 @@ void ip_header(unsigned char *buffer)
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = ip->daddr;
     
-    // TODO:
-    // Check if cp.ip_source and cp.ip_dest != NULL and if they correct
-    
-    fprintf(logfile, "\nIP Header\n");
+    char *ip_source = strdup(inet_ntoa(source.sin_addr));
+    char *ip_dest = strdup(inet_ntoa(dest.sin_addr));
 
-    fprintf(logfile, "\t|-Version: %d\n", (unsigned int)ip->version);
-    fprintf(logfile, "\t|-Internet Header Length: %d DWORDS or %d Bytes\n",
-                        (unsigned int)ip->ihl, ((unsigned int)(ip->ihl))*4);
-    fprintf(logfile, "\t|-Type Of Service: %d\n", (unsigned int)ip->tos);
-    fprintf(logfile, "\t|-Total Length: %d\n", ntohs(ip->tot_len));
-    fprintf(logfile, "\t|-Identification: %d\n", ntohs(ip->id));
-    fprintf(logfile, "\t|-Time To Live: %d\n", (unsigned int)ip->ttl);
-    fprintf(logfile, "\t|-Protocol: %d\n", (unsigned int)ip->protocol);
-    fprintf(logfile, "\t|-Header Checksum: %d\n", ntohs(ip->check));
-    fprintf(logfile, "\t|-Source IP: %s\n", inet_ntoa(source.sin_addr));
-    fprintf(logfile, "\t|-Destination IP: %s\n", inet_ntoa(dest.sin_addr));
-}
-
-
-/*
- * Takes data from the UDP datagram and writes it to the log file.
- * */
-void payload(unsigned char *buffer, int buflen)
-{
-    unsigned char *data = (buffer + iphdrlen + sizeof(struct ethhdr) + sizeof(struct udphdr));
-    fprintf(logfile, "\nData\n");
-    int remaining_data = buflen - (iphdrlen + sizeof(struct ethhdr) + sizeof(struct udphdr));
-    for (int i = 0; i < remaining_data; i++) {
-        if (i != 0 && i % 16 == 0) {
-            fprintf(logfile, "\n");
-        }
-        fprintf(logfile, "%.2X", data[i]);
-    }
-    fprintf(logfile, "\n");
-    fprintf(logfile, "|-Remaining Data: %d\n", remaining_data);
-}
-
-
-/*
- * Recieve data from OSI L4 and write it to log file.
- */
-void udp_header(unsigned char *buffer, int buflen)
-{
-    fprintf(logfile, "\n*******************UDP Packet********************");
-
-    ethernet_header(buffer);
-    ip_header(buffer);
-    fprintf(logfile, "\nUDP Header\n");
-
-    // TODO:
-    // Check if cp.port_source and cp.port_dest != NULL and if they correct
-    
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
-    fprintf(logfile, "\t|-Source Port: %d\n", ntohs(udp->source));
-    fprintf(logfile, "\t|-Destination Port: %d\n", ntohs(udp->dest));
-    fprintf(logfile, "\t|-UDP Length: %d\n", ntohs(udp->len));
-    fprintf(logfile, "\t|-UDP Checksum: %d\n", ntohs(udp->check));
 
-    payload(buffer, buflen);
+    int data_size = ntohs(udp->len);
+    int port_source = ntohs(udp->source);
+    int port_dest = ntohs(udp->dest);
 
-    fprintf(logfile, "************************************************\n\n\n");
+    if ((!strcmp(cp.ip_source, "") || !strcmp(cp.ip_source, ip_source)) &&
+        (!strcmp(cp.ip_dest, "") || !strcmp(cp.ip_dest, ip_dest)) &&
+        (cp.port_source == -1 || cp.port_source == port_source) &&
+        (cp.port_dest == -1 || cp.port_dest == port_dest)) {
+
+        fprintf(logfile, "\n*******************UDP Packet********************");
+
+        fprintf(logfile, "\nIP Header\n");
+        fprintf(logfile, "\t|-Source IP: %s\n", ip_source);
+        fprintf(logfile, "\t|-Destination IP: %s\n", ip_dest);
+
+        fprintf(logfile, "\nUDP Header\n");
+        fprintf(logfile, "\t|-Source Port: %d\n", port_source);
+        fprintf(logfile, "\t|-Destination Port: %d\n", port_dest);
+    
+        fprintf(logfile, "\nData\n");
+        fprintf(logfile, "\t|-Datagram size: %d\n", data_size);
+        
+        fprintf(logfile, "************************************************\n\n\n");
+    }
 }
 
 
 /*
  * Sniffs all packets that arrive on a given network interface and takes only UDP.
  * */
-void data_process(unsigned char *buffer, int buflen)
+void data_process(unsigned char *buffer)
 {
     struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
     ++total;
@@ -216,7 +174,7 @@ void data_process(unsigned char *buffer, int buflen)
     switch (ip->protocol) {
         case 17:            /* ID number for UDP protocol in /etc/protocols */
             ++udp;
-            udp_header(buffer, buflen);
+            packet_information(buffer);
             break;
         default:
             ++other;

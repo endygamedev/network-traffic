@@ -22,15 +22,18 @@ int is_number(char *arg)
 
 
 /*
- * Checks if IP record is valid of not.
+ * Checks if IP record is valid or not.
  * Returns EXIT_SUCCESS if all correct, EXIT_FAILURE otherwise.
  * */
-int check_ip_record(char *ip) {
+int check_ip_record(char *ip)
+{
     if (ip == NULL) {
         return EXIT_SUCCESS;
     }
+    
+    char *tmp = strdup(ip);
 
-    char *token = strtok(ip, ".");
+    char *token = strtok(tmp, ".");
     int number, count = 0;
     while (token != NULL) {
         if (count > 3) {
@@ -50,5 +53,19 @@ int check_ip_record(char *ip) {
         count++;
     }
     
+    return EXIT_SUCCESS;
+}
+
+
+/*
+ * Checks if UDP port is valid or not.
+ * Returns EXIT_SUCCESS if all correct, EXIT_FAILURE otherwise.
+ * */
+int check_port(int port)
+{
+    if (port > 63535) {
+        fprintf(stderr, "Error: Invalid UDP port filter\n");
+        exit(EXIT_FAILURE);
+    }
     return EXIT_SUCCESS;
 }

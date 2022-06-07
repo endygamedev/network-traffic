@@ -1,7 +1,7 @@
 MAIN=main
 BASIC=basic
 LOG=log
-CC_FLAGS=-std=gnu99 -Wall -Wpedantic -Wextra -Werror
+CC_FLAGS=-std=gnu99 -Wall -Werror -Wpedantic -Wextra
 CC=gcc
 
 all: $(BASIC).c
