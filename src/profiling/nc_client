@@ -1,0 +1,2 @@
+#!/bin/bash
+nc -u $(hostname -i | awk '{print $1}') 9999

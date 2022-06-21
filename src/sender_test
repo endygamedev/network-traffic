@@ -1,2 +1,2 @@
 #/bin/bash
-sudo ./main -ips 192.168.1.3
+sudo ./main -ipd 192.168.1.2 -pd 9999
