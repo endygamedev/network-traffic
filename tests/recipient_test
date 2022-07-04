@@ -1,0 +1,5 @@
+#/bin/bash
+
+# sudo ../src/recipient
+# or (if you install `.deb`-package)
+sudo ps-stats

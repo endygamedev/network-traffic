@@ -1,0 +1,24 @@
+#!/bin/bash
+ip_server=$(hostname -i | awk '{print $1}')
+port=9999
+message="Hello"
+count=10
+
+while getopts s:p:c:m: flag
+do
+    case "${flag}" in
+        s) ip_server=${OPTARG};;
+        p) port=${OPTARG};;
+        c) count=${OPTARG};;
+        m) message=${OPTARG};;
+    esac
+done
+
+echo "Sending messages '$message' to $ip_server..."
+
+i=1
+while [ $i -le $count ]
+do
+    echo -n $message | nc -u -b $ip_server $port
+    i=$(($i + 1))
+done

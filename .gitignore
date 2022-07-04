@@ -1,3 +1,7 @@
+# Perfromance Data
+./profiling/perf.data
+
+
 # Prerequisites
 *.d
 

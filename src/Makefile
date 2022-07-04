@@ -1,7 +1,6 @@
 MAIN=main
 RECIP=recipient
 BASIC=basic
-LOG=log
 
 CC_FLAGS=-std=gnu99 -Wall -Werror -Wpedantic -Wextra -lpthread -lrt
 CC=gcc
@@ -14,5 +13,4 @@ recipient:
 
 clean:
 	rm -f $(MAIN)
-	rm -f $(LOG)
 	rm -f $(RECIP)

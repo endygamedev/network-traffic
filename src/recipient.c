@@ -7,6 +7,9 @@
 #include <mqueue.h>
 #include <sys/stat.h>
 
+/* colors.h file */
+#include "colors.h"
+
 
 /* Maxium number of messages in message queue */
 #define MAX_MESSAGES 1
@@ -33,6 +36,8 @@ int main(void)
     mqd_t queue;
     packet_message_t msg;
     
+    fprintf(stdout, "%sPacket Sniffer: Stats\n\n%s", HEADER, ENDC);
+
     while (1) {
 
         /*
@@ -46,16 +51,16 @@ int main(void)
                 O_CREAT | O_RDONLY | O_NONBLOCK,
                 S_IRUSR | S_IWUSR,
                 &attributes)) == -1) {
-            fprintf(stderr, "Error: Executing `mq_open`\n");
+            fprintf(stderr, "%sError: Executing `mq_open`%s\n", RED, ENDC);
             exit(EXIT_FAILURE);
         }
         
         if ((mq_receive(queue, (char *)&msg, sizeof(msg), NULL)) == -1) {
-            fprintf(stderr, "Error: Executing `mq_receive`\n");
+            fprintf(stderr, "%sError: Executing `mq_receive`%s\n", RED, ENDC);
             exit(EXIT_FAILURE);
         }
-
-        printf("\rCount: %d \t Bytes: %d", msg.count, msg.bytes);
+        fprintf(stdout, "\r%sCount: %d \t Bytes: %d%s", GREEN, msg.count,
+                                                        msg.bytes, ENDC);
         fflush(stdout);
     }
 

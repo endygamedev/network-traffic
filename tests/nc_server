@@ -1,0 +1,5 @@
+#!/bin/bash
+GREEN='\033[32m'
+NC='\033[0m'
+echo -e "${GREEN}Server is ready ...${NC}"
+nc -u -l 9999

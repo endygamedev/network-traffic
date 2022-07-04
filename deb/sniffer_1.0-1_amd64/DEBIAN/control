@@ -1,0 +1,5 @@
+Package: packet-sniffer
+Version: 1.0
+Architecture: amd64
+Maintainer: Egor Bronnikov <bronnikov.40@mail.ru>
+Description: Utilities for sniffing packages by specified parameters.

@@ -4,6 +4,10 @@
 #include <stdlib.h>
 
 
+/* Maximum number of ports */
+#define MAX_PORT 65535
+
+
 /*
  * Checks if the string is a number.
  * Returns 1 if string is a number, 0 otherwise.
@@ -35,20 +39,25 @@ int check_ip_record(char *ip)
 
     char *token = strtok(tmp, ".");
     int number, count = 0;
+
     while (token != NULL) {
         if (count > 3) {
             fprintf(stderr, "Error: Invalid IP filter\n");
             exit(EXIT_FAILURE);
         }
+        
         if (!is_number(token)) {
             fprintf(stderr, "Error: Invalid IP filter\n");
             exit(EXIT_FAILURE);
         }
+        
         number = atoi(token);
+        
         if (number > 255 || number < 0) {
             fprintf(stderr, "Error: Invalid IP filter\n");
             exit(EXIT_FAILURE);
         }
+
         token = strtok(NULL, ".");
         count++;
     }
@@ -63,7 +72,7 @@ int check_ip_record(char *ip)
  * */
 int check_port(int port)
 {
-    if (port > 63535) {
+    if (port > MAX_PORT) {
         fprintf(stderr, "Error: Invalid UDP port filter\n");
         exit(EXIT_FAILURE);
     }

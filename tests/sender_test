@@ -1,0 +1,5 @@
+#/bin/bash
+
+# sudo ../src/main -ipd 192.168.1.2 -pd 9999
+# or (if you install `.deb`-package)
+sudo ps-scanner -ipd 192.168.1.2 -pd 9999

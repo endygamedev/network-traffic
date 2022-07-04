@@ -1,3 +1,0 @@
-#!/bin/bash
-echo "Server is ready ..."
-nc -u -l 9999

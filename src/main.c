@@ -21,6 +21,9 @@
 /* main.h file */
 #include "main.h"
 
+/* colors.h file */
+#include "colors.h"
+
 
 /* Maximum number of bytes to accept from the message */
 #define BYTES 65536
@@ -47,7 +50,7 @@ typedef struct {
 
 
 FILE *logfile;
-int udp, iphdrlen, bytes;
+int udp_count, iphdrlen, bytes;
 
 struct sockaddr saddr;
 struct sockaddr_in source, dest;
@@ -77,7 +80,8 @@ int main(int argc, char *argv[])
                 cp.port_source = atoi(argv[i]);
                 continue;
             } else {
-                fprintf(stderr, "Error: Invalid --port_source parameter\n");
+                fprintf(stderr, "%sError: Invalid --port_source parameter%s\n",
+                                                                    RED, ENDC);
                 exit(EXIT_FAILURE);
             }
         }
@@ -87,18 +91,29 @@ int main(int argc, char *argv[])
                 cp.port_dest = atoi(argv[i]);
                 continue;
             } else {
-                fprintf(stderr, "Error: Invalid --port_dest parameter\n");
+                fprintf(stderr, "%sError: Invalid --port_dest parameter%s\n",
+                                                                    RED, ENDC);
                 exit(EXIT_FAILURE);
             }
         }
     }
-    
-    printf("|-FILTER:\n");
-    printf("|-%s\n", cp.ip_source);
-    printf("|-%s\n", cp.ip_dest);
-    printf("|-%d\n", cp.port_source);
-    printf("|-%d\n", cp.port_dest);
-   
+
+    char port_dest[6], port_source[6];
+
+    fprintf(stdout, "%sPacket Sniffer: Scanner\n\n%s", HEADER, ENDC);
+
+    fprintf(stdout, "%sFILTER%s\n", GREEN, ENDC);
+    fprintf(stdout, "|-IP source: \t %s\n",
+                            strcmp(cp.ip_source, "") ? cp.ip_source : "\t None");
+    fprintf(stdout, "|-IP destination: \t %s\n",
+                            strcmp(cp.ip_dest, "") ? cp.ip_dest : "None");
+    sprintf(port_source, "%d", cp.port_source);
+    fprintf(stdout, "|-Port source: \t %s\n",
+                    cp.port_source != -1 ? port_source : "\t None");
+    sprintf(port_dest, "%d", cp.port_dest);
+    fprintf(stdout, "|-Port destination: \t %s\n",
+                    cp.port_dest != -1 ? port_dest : "None");
+
 
     /* Checking the filters */
     check_ip_record(cp.ip_source);
@@ -111,7 +126,8 @@ int main(int argc, char *argv[])
     pthread_t data_thread;
 
     if (pthread_create(&data_thread, NULL, get_data, NULL)) {
-        fprintf(stderr, "Error: Collecting data thread creation failed\n");
+        fprintf(stderr, "%sError: Collecting data thread creation failed%s\n",
+                                                                    RED, ENDC);
         exit(EXIT_FAILURE);
     }
     
@@ -120,7 +136,8 @@ int main(int argc, char *argv[])
     pthread_t stats_thread;
     
     if (pthread_create(&stats_thread, NULL, send_stats, NULL)) {
-        fprintf(stderr, "Error: Send statistics thread creation failed\n");
+        fprintf(stderr, "%sError: Send statistics thread creation failed%s\n",
+                                                                    RED, ENDC);
         exit(EXIT_FAILURE);
     }
     
@@ -151,15 +168,17 @@ void *send_stats()
         if ((queue = mq_open(MQ_NAME, O_CREAT | O_WRONLY,
                              S_IRUSR | S_IWUSR,
                              &attributes)) == -1) {
-            fprintf(stderr, "Error: Executing `mq_open`\n");
+            fprintf(stderr, "%sError: Executing `mq_open`%s\n",
+                                                    RED, ENDC);
             exit(EXIT_FAILURE);
         }
 
-        msg.count = udp;
+        msg.count = udp_count;
         msg.bytes = bytes;
 
         if ((mq_send(queue, (char *)&msg, sizeof(msg), 1)) == -1) {
-            fprintf(stderr, "Error: Executing `mq_send`\n");
+            fprintf(stderr, "%sError: Executing `mq_send`%s\n",
+                                                    RED, ENDC);
             exit(EXIT_FAILURE);
         }
     }
@@ -180,19 +199,20 @@ void *get_data()
     unsigned char *buffer = (unsigned char *)malloc(BYTES);
     memset(buffer, 0, BYTES);
 
-    logfile = fopen("log", "w");
+    /* Save all filtered packets in /var/log/ps-scanner.log */
+    logfile = fopen("/var/log/ps-scanner.log", "w");
 
     if (!logfile) {
-        fprintf(stderr, "Error: Unable to open log file\n");
+        fprintf(stderr, "%sError: Unable to open log file%s\n", RED, ENDC);
         exit(EXIT_FAILURE);
     }
 
-    printf("\nScanning ...\n");
+    fprintf(stdout, "\n%sScanning ...%s\n", BLINK, ENDC);
 
     sock_r = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     
     if (sock_r < 0) {
-        fprintf(stderr, "Error: Can't open socket\n");
+        fprintf(stderr, "%sError: Can't open socket%s\n", RED, ENDC);
         exit(EXIT_FAILURE);
     }
 
@@ -202,7 +222,8 @@ void *get_data()
                                                     (socklen_t *)&saddr_len);
 
         if (buflen < 0) {
-            fprintf(stderr, "Error: Error while reading recvfrom function\n");
+            fprintf(stderr, "%sError: Error while reading recvfrom function%s\n",
+                                                                    RED, ENDC);
             exit(EXIT_FAILURE);
         }
 
@@ -244,6 +265,7 @@ void packet_information(unsigned char *buffer)
         (cp.port_source == -1 || cp.port_source == port_source) &&
         (cp.port_dest == -1 || cp.port_dest == port_dest)) {
 
+
         fprintf(logfile, "\n*******************UDP Packet********************");
 
         fprintf(logfile, "\nIP Header\n");
@@ -257,6 +279,7 @@ void packet_information(unsigned char *buffer)
         fprintf(logfile, "\nData\n");
         fprintf(logfile, "\t|-Datagram size: %d\n", data_size);
         
+        udp_count++;
         bytes += data_size;
 
         fprintf(logfile, "************************************************\n\n\n");
@@ -273,7 +296,6 @@ void data_process(unsigned char *buffer)
     
     /* ID number for UDP protocol in /etc/protocols */
     if (ip->protocol == 17) {
-        ++udp;
         packet_information(buffer);
     }
 }
