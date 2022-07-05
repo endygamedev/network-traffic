@@ -10,6 +10,7 @@
   <ol>
     <a id="toc"></a>
     <li><b><a href="#docs">Документация</a></b></li>
+    <li><b><a href="#tests">Запуск</a></b></li>
     <li><b><a href="#todo">TODO</a></b></li>
     <li><b><a href="#license">Лицензия</a></b></li>
   </ol>
@@ -35,6 +36,11 @@ $ make clean
 ```bash
 $ make remove
 ```
+
+<h2><a href="#toc" id="tests">Запуск</a></h2>
+<p>Видеопример последовательного запуска программ:</p>
+
+https://user-images.githubusercontent.com/52889537/177347166-889497c8-94ee-4543-9b55-ff54a54e32c1.mp4
 
 <h2><a href="#toc" id="todo">TODO</a></h2>
 Процесс разработки можно отслеживать в <code><a href="./TODO.md">TODO.md</a></code>.
