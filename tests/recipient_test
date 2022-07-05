@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # sudo ../src/recipient
 # or (if you install `.deb`-package)

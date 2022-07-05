@@ -1,1 +1,138 @@
 \section{Запуск}
+Установленный deb-пакет содержит две утилиты:
+\begin{enumerate}
+    \item \verb|ps-scanner| -- утилита для сбора статистики (системная);
+    \item \verb|ps-stats| -- пользовательская утилита, которая предоставляет собранную статистику.
+\end{enumerate}
+
+\subsection{ps-scanner}
+\verb|ps-scanner| получает на вход 4 опциональных аргумента, которые помогают отфильтровать нужные пакеты:
+\begin{itemize}
+    \item \verb|-ips| или \verb|--ip_source| -- IP-адрес источника отслеживаемых пакетов;
+    \item \verb|-ipd| или \verb|--ip_dest| -- IP-адрес назначения отслеживаемых пакетов;
+    \item \verb|-ps| или \verb|--port_source| -- порт источника отслеживаемых пакетов;
+    \item \verb|-pd| или \verb|--port_dest| -- порт назначения отслеживаемых пакетов.
+\end{itemize}
+
+\linespace
+
+Запуск \verb|ps-scanner|:
+\begin{lstlisting}
+$ sudo ps-scanner -ips <IP source> -ipd <IP dest> -ps <port source> -pd <port dest>
+\end{lstlisting}
+
+\linespace
+
+Пример запуска \verb|ps-scanner|:
+\begin{lstlisting}
+$ sudo ps-scanner -ipd 192.168.1.2 -pd 9999
+\end{lstlisting}
+В данном примере отбираются только те пакеты, у которых IP-адрес назначения -- 192.168.1.2 и порт назначения -- 9999.
+
+\linespace
+
+Также в файл \verb|/var/log/ps-scanner.log| записываются все пакеты, которые прошли этап отбора, чтобы можно было проверить результат работы программы.
+
+\subsection{ps-stats}
+
+Данная утилита идёт без аргументов и связывается с утилитой \verb|ps-scanner| по названию (идентификатору) очереди (Message Queue Name).
+
+\verb|ps-stats| запускается после \verb|ps-scanner|, если попытаться выводить статистику без предварительного сбора, то будет напечатано сообщение с ошибкой.
+
+\linespace
+
+Запуск \verb|ps-stats|:
+\begin{lstlisting}
+$ sudo ps-stats
+\end{lstlisting}
+
+\subsection{Скрипты}
+
+Для проверки работоспособности утилит можно воспользоваться файлами из папки \verb|tests/|:
+
+\begin{lstlisting}[language=bash]
+./tests/
+    Makefile
+    nc_client
+    nc_server
+    recipient_test
+    sender_test
+\end{lstlisting}
+
+\linespace
+
+\verb|sender_test|:
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+sudo ps-scanner -ipd $(hostname -I | awk '{print $1}') -pd 9999
+\end{lstlisting}
+В данном скрипте запускается сканер, который отбирает только те пакеты, у которых IP-адрес назначения \verb|localhost|, а порт назначения 9999.
+
+\newpage
+
+\verb|recipient_test|:
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+sudo ps-stats
+\end{lstlisting}
+В данном скрипте запускается вывод собранной статистики \verb|ps-scanner|.
+
+\linespace
+
+\verb|nc_server|:
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+nc -u -l 9999
+\end{lstlisting}
+С помощью утилиты \verb|netcat| запускается UDP-сервер на порте 9999, который ожидает сообщений от клиентов.
+
+\linespace
+
+\verb|nc_client|:\\
+Данная утилита принимает 4 опциональных аргумента:
+\begin{itemize}
+    \item \verb|-c| -- количество посланных пользователем сообщений;
+    \item \verb|-m| -- текст сообщения, которое будет послано;
+    \item \verb|-s| -- IP-адрес сервера;
+    \item \verb|-p| -- порт сервера.
+\end{itemize}
+То есть после запуска данной программы на сервер \verb|$count|-раз отправится сообщение \verb|$message|.
+
+\subsection{Тесты}
+
+Итак, для тестирования, с помощью \verb|netcat|, создаётся локальный UDP-сервер, на который посылаются UDP-пакеты (сообщения) клиентов.
+
+Для начала стоит перейти в папку с тестом:
+\begin{lstlisting}
+$ cd ./tests/
+\end{lstlisting}
+
+Затем в запускается UDP-сервер:
+\begin{lstlisting}
+$ ./nc_server
+\end{lstlisting}
+
+\newpage
+
+После чего можно запустить \verb|ps-scanner|:
+\begin{lstlisting}
+$ ./sender_test
+\end{lstlisting}
+
+Далее стоит запустить \verb|ps-stats|:
+\begin{lstlisting}
+$ ./recipient_test
+\end{lstlisting}
+
+После чего можно отправлять различные пакеты на сервер и смотреть как отображается статистика:
+\begin{lstlisting}
+$ ./nc_client
+\end{lstlisting}
+Также собранные пакеты можно посмотреть:
+\begin{lstlisting}
+$ cat /var/log/ps-scanner.log
+\end{lstlisting}
+
+\linespace
+
+Видеопример последовательного запуска программ предстален в репозитории GitHub.
