@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* colors.h file */
+#include "colors.h"
+
 
 /* Maximum number of ports */
 #define MAX_PORT 65535
@@ -42,25 +45,27 @@ int check_ip_record(char *ip)
 
     while (token != NULL) {
         if (count > 3) {
-            fprintf(stderr, "Error: Invalid IP filter\n");
+            fprintf(stderr, "%sError: Invalid IP filter%s\n", RED, ENDC);
             exit(EXIT_FAILURE);
         }
         
         if (!is_number(token)) {
-            fprintf(stderr, "Error: Invalid IP filter\n");
+            fprintf(stderr, "%sError: Invalid IP filter%s\n", RED, ENDC);
             exit(EXIT_FAILURE);
         }
         
         number = atoi(token);
         
         if (number > 255 || number < 0) {
-            fprintf(stderr, "Error: Invalid IP filter\n");
+            fprintf(stderr, "%sError: Invalid IP filter%s\n", RED, ENDC);
             exit(EXIT_FAILURE);
         }
 
         token = strtok(NULL, ".");
         count++;
     }
+
+    free(tmp);
     
     return EXIT_SUCCESS;
 }
@@ -73,7 +78,7 @@ int check_ip_record(char *ip)
 int check_port(int port)
 {
     if (port > MAX_PORT) {
-        fprintf(stderr, "Error: Invalid UDP port filter\n");
+        fprintf(stderr, "%sError: Invalid UDP port filter%s\n", RED, ENDC);
         exit(EXIT_FAILURE);
     }
     return EXIT_SUCCESS;

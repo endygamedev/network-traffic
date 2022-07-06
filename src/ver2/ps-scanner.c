@@ -9,6 +9,9 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <arpa/inet.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <linux/if_packet.h>
 
 /* POSIX Thread */
 #include <pthread.h>
@@ -18,8 +21,8 @@
 #include <sys/stat.h>
 #include <mqueue.h>
 
-/* main.h file */
-#include "main.h"
+/* ps-scanner.h file */
+#include "ps-scanner.h"
 
 /* colors.h file */
 #include "colors.h"
@@ -54,17 +57,39 @@ int udp_count, iphdrlen, bytes;
 
 struct sockaddr saddr;
 struct sockaddr_in source, dest;
+char *interface = "";
 struct correct_packets cp;
 
 
 int main(int argc, char *argv[])
 {
+    struct if_nameindex *if_nidxs, *intf;
+
+    if_nidxs = if_nameindex();
+
     cp.ip_source = "";
     cp.ip_dest = "";
     cp.port_source = -1;
     cp.port_dest = -1;
 
     for (int i = 1; i < argc; i++) {
+        if (!strcmp("--interface", argv[i]) || !(strcmp("-ni", argv[i]))) {
+            char *tmp = argv[++i];
+            if (if_nidxs != NULL) {
+                for (intf = if_nidxs; intf->if_index != 0 || intf->if_name != NULL; intf++) {
+                    if (!strcmp(intf->if_name, tmp)) {
+                        interface = tmp;
+                        break;
+                    }
+                }
+                continue;
+            } else {
+                fprintf(stderr, "%sError: No network interface was found%s\n",
+                                                                    RED, ENDC);
+                exit(EXIT_FAILURE);
+            }
+        }
+
         if (!strcmp("--ip_source", argv[i]) || !strcmp("-ips", argv[i])) {
             cp.ip_source = argv[++i];
             continue;
@@ -98,18 +123,27 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (!strcmp(interface, "")) {
+        fprintf(stderr, "%sError: The parameter `-ni` is not set or invalid%s\n",
+                                                                    RED, ENDC);
+        exit(EXIT_FAILURE);
+    }
+
+
     char port_dest[6], port_source[6];
 
     fprintf(stdout, "%sPacket Sniffer: Scanner\n\n%s", HEADER, ENDC);
+    
+    fprintf(stdout, "%sNETWORK INTERFACE: %s%s\n\n", GREEN, ENDC, interface);
 
     fprintf(stdout, "%sFILTER%s\n", GREEN, ENDC);
-    fprintf(stdout, "|-IP source: \t %s\n",
-                            strcmp(cp.ip_source, "") ? cp.ip_source : "\t None");
+    fprintf(stdout, "|-IP source: \t\t %s\n",
+                            strcmp(cp.ip_source, "") ? cp.ip_source : "None");
     fprintf(stdout, "|-IP destination: \t %s\n",
                             strcmp(cp.ip_dest, "") ? cp.ip_dest : "None");
     sprintf(port_source, "%d", cp.port_source);
-    fprintf(stdout, "|-Port source: \t %s\n",
-                    cp.port_source != -1 ? port_source : "\t None");
+    fprintf(stdout, "|-Port source: \t\t %s\n",
+                    cp.port_source != -1 ? port_source : "None");
     sprintf(port_dest, "%d", cp.port_dest);
     fprintf(stdout, "|-Port destination: \t %s\n",
                     cp.port_dest != -1 ? port_dest : "None");
@@ -196,8 +230,13 @@ void *send_stats()
 void *get_data()
 {
     int sock_r, saddr_len, buflen;
+    struct ifreq ifr;
+    struct sockaddr_ll sll;
     unsigned char *buffer = (unsigned char *)malloc(BYTES);
+
     memset(buffer, 0, BYTES);
+    memset(&ifr, 0, sizeof(ifr));
+    memset(&sll, 0, sizeof(sll));
 
     /* Save all filtered packets in /var/log/ps-scanner.log */
     logfile = fopen("/var/log/ps-scanner.log", "w");
@@ -207,14 +246,31 @@ void *get_data()
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stdout, "\n%sScanning ...%s\n", BLINK, ENDC);
-
     sock_r = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-    
+
     if (sock_r < 0) {
         fprintf(stderr, "%sError: Can't open socket%s\n", RED, ENDC);
         exit(EXIT_FAILURE);
     }
+    
+    strncpy((char *)ifr.ifr_name, interface, IFNAMSIZ);
+    
+    if (ioctl(sock_r, SIOCGIFINDEX, &ifr) < 0) {
+        fprintf(stderr, "%sError: Unable to find interface index%s\n", RED, ENDC);
+        exit(EXIT_FAILURE);
+    }
+
+    sll.sll_family = AF_PACKET;
+    sll.sll_ifindex = ifr.ifr_ifindex;
+    sll.sll_protocol = htons(ETH_P_ALL);
+    
+    if (bind(sock_r, (struct sockaddr *)&sll, sizeof(sll)) == -1) {
+        fprintf(stderr, "%sError: Can't bind socket to specific interface%s\n",
+                                                                    RED, ENDC);
+        exit(EXIT_FAILURE);
+    }
+    
+    fprintf(stdout, "\n%sScanning ...%s\n", BLINK, ENDC);
 
     while (1) {
         saddr_len = sizeof(saddr);
@@ -233,6 +289,7 @@ void *get_data()
 
     close(sock_r);
     fclose(logfile);
+    free(buffer);
 
     pthread_exit(0);
 }
@@ -251,8 +308,8 @@ void packet_information(unsigned char *buffer)
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = ip->daddr;
     
-    char *ip_source = strdup(inet_ntoa(source.sin_addr));
-    char *ip_dest = strdup(inet_ntoa(dest.sin_addr));
+    char *ip_source = inet_ntoa(source.sin_addr);
+    char *ip_dest = inet_ntoa(dest.sin_addr);
 
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
 
@@ -268,6 +325,8 @@ void packet_information(unsigned char *buffer)
 
         fprintf(logfile, "\n*******************UDP Packet********************");
 
+        fprintf(logfile, "\nNetwork Interface: %s\n", interface);
+
         fprintf(logfile, "\nIP Header\n");
         fprintf(logfile, "\t|-Source IP: %s\n", ip_source);
         fprintf(logfile, "\t|-Destination IP: %s\n", ip_dest);
@@ -279,10 +338,10 @@ void packet_information(unsigned char *buffer)
         fprintf(logfile, "\nData\n");
         fprintf(logfile, "\t|-Datagram size: %d\n", data_size);
         
+        fprintf(logfile, "************************************************\n\n\n");
+        
         udp_count++;
         bytes += data_size;
-
-        fprintf(logfile, "************************************************\n\n\n");
     }
 }
 
