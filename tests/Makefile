@@ -1,2 +1,2 @@
 all:
-	make -C ../src/ver1/
+	make -C ../src/

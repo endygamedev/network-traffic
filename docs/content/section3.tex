@@ -1,13 +1,15 @@
 \section{Запуск}
-Установленный deb-пакет содержит две утилиты:
+Установленный deb-пакет содержит три утилиты:
 \begin{enumerate}
-    \item \verb|ps-scanner| -- утилита для сбора статистики (системная);
+    \item \verb|ps-scanner-1| -- утилита для сбора статистики (первый вариант реализации);
+    \item \verb|ps-scanner-2| -- утилита для сбора статистики (второй вариант реализации);
     \item \verb|ps-stats| -- пользовательская утилита, которая предоставляет собранную статистику.
 \end{enumerate}
 
-\subsection{ps-scanner}
-\verb|ps-scanner| получает на вход 4 опциональных аргумента, которые помогают отфильтровать нужные пакеты:
+\subsection{ps-scanner-1 и ps-scanner-2}
+\verb|ps-scanner-1| и \verb|ps-scanner-2| получают на вход 1 обязательный аргмент и 4 опциональных аргумента, которые помогают отфильтровать нужные пакеты:
 \begin{itemize}
+    \item \verb|-ni| или \verb|--interface| -- \footnotesize\textit{!(обязательный аргумент)} \normalsizeсетевой интерфейс, с которого будут считываться пакеты.
     \item \verb|-ips| или \verb|--ip_source| -- IP-адрес источника отслеживаемых пакетов;
     \item \verb|-ipd| или \verb|--ip_dest| -- IP-адрес назначения отслеживаемых пакетов;
     \item \verb|-ps| или \verb|--port_source| -- порт источника отслеживаемых пакетов;
@@ -16,28 +18,43 @@
 
 \linespace
 
-Запуск \verb|ps-scanner|:
+Запуск \verb|ps-scanner-1| и \verb|ps-scanner-2|:
 \begin{lstlisting}
-$ sudo ps-scanner -ips <IP source> -ipd <IP dest> -ps <port source> -pd <port dest>
+$ sudo ps-scanner-1 -ni <interface name> -ips <IP source> -ipd <IP dest> -ps <port source> -pd <port dest>
 \end{lstlisting}
 
-\linespace
-
-Пример запуска \verb|ps-scanner|:
 \begin{lstlisting}
-$ sudo ps-scanner -ipd 192.168.1.2 -pd 9999
+$ sudo ps-scanner-2 -ni <interface name> -ips <IP source> -ipd <IP dest> -ps <port source> -pd <port dest>
 \end{lstlisting}
-В данном примере отбираются только те пакеты, у которых IP-адрес назначения -- 192.168.1.2 и порт назначения -- 9999.
+
+\newpage
+
+Пример запуска \verb|ps-scanner-1| (аналогично для \verb|ps-scanner-2|):
+\begin{lstlisting}
+$ sudo ps-scanner-1 -ni lo -ipd 192.168.1.2 -pd 9999
+\end{lstlisting}
+В данном примере отбираются только те пакеты с сетевого интерфейса \verb|lo|, у которых IP-адрес назначения -- 192.168.1.2 и порт назначения -- 9999.
 
 \linespace
 
 Также в файл \verb|/var/log/ps-scanner.log| записываются все пакеты, которые прошли этап отбора, чтобы можно было проверить результат работы программы.
 
+\linespace
+
+Список всех доступных сетевых интерфейсов можно узнать следующим способом:
+\begin{lstlisting}
+$ netstat -i
+\end{lstlisting}
+или
+\begin{lstlisting}
+$ ip link show
+\end{lstlisting}
+
 \subsection{ps-stats}
 
-Данная утилита идёт без аргументов и связывается с утилитой \verb|ps-scanner| по названию (идентификатору) очереди (Message Queue Name).
+Данная утилита идёт без аргументов и связывается с утилитой \verb|ps-scanner-1| или \verb|ps-scanner-2| по названию (идентификатору) очереди (Message Queue Name).
 
-\verb|ps-stats| запускается после \verb|ps-scanner|, если попытаться выводить статистику без предварительного сбора, то будет напечатано сообщение с ошибкой.
+\verb|ps-stats| запускается после \verb|ps-scanner-1| или \verb|ps-scanner-2|, если попытаться выводить статистику без предварительного сбора, то будет напечатано сообщение с ошибкой.
 
 \linespace
 
@@ -46,41 +63,59 @@ $ sudo ps-scanner -ipd 192.168.1.2 -pd 9999
 $ sudo ps-stats
 \end{lstlisting}
 
+\newpage
+
 \subsection{Скрипты}
 
-Для проверки работоспособности утилит можно воспользоваться файлами из папки \verb|tests/|:
+Для проверки работоспособности утилит можно воспользоваться файлами из папки \verb|tests/|. Они создают локальный UDP-сервер и отправляют сообщения (пакеты) пользователя.
 
-\begin{lstlisting}[language=bash]
-./tests/
+\begin{lstlisting}
+tests/
     Makefile
-    nc_client
-    nc_server
-    recipient_test
-    sender_test
+    nc-client
+    nc-server
+    ps-scanner-test
+    ps-stats-test
 \end{lstlisting}
 
 \linespace
 
-\verb|sender_test|:
-\begin{lstlisting}[language=bash]
+\verb|ps-scanner-test|:
+\begin{lstlisting}
 #!/bin/bash
-sudo ps-scanner -ipd $(hostname -I | awk '{print $1}') -pd 9999
+sudo ps-scanner-$1 -ni lo -ipd $(hostname -I | awk '{print $1}') -pd 9999
 \end{lstlisting}
-В данном скрипте запускается сканер, который отбирает только те пакеты, у которых IP-адрес назначения \verb|localhost|, а порт назначения 9999.
+Данный скрипт принимает 1 обязательный позиционный аргумент, который определяет какую реализацию сбора статистики необходимос запустить (1 или 2). Запускается сканер на сетевом интерфейса \verb|lo| (Loopback interface), который отбирает только те пакеты, у которых IP-адрес назначения \verb|localhost|, а порт назначения \verb|9999|.
 
-\newpage
+\linespace
 
-\verb|recipient_test|:
-\begin{lstlisting}[language=bash]
+Также если не собирать \verb|deb|-пакет, то можно протестировать данную утилиту из исходников:
+\begin{lstlisting}
+#!/bin/bash
+sudo ../src/ps-scanner-$1 -ni lo -ipd $(hostname -I | awk '{print $1}') -pd 9999
+\end{lstlisting}
+
+\linespace
+
+\verb|ps-stats|:
+\begin{lstlisting}
 #!/bin/bash
 sudo ps-stats
 \end{lstlisting}
 В данном скрипте запускается вывод собранной статистики \verb|ps-scanner|.
 
+\newpage
+
+Также если не собирать \verb|deb|-пакет, то можно протестировать данную утилиту из исходников:
+\begin{lstlisting}
+#!/bin/bash
+sudo ../src/ps-stats
+\end{lstlisting}
+
 \linespace
 
-\verb|nc_server|:
-\begin{lstlisting}[language=bash]
+\verb|nc-server|:
+\begin{lstlisting}
 #!/bin/bash
 nc -u -l 9999
 \end{lstlisting}
@@ -88,7 +123,7 @@ nc -u -l 9999
 
 \linespace
 
-\verb|nc_client|:\\
+\verb|nc-client|:\\
 Данная утилита принимает 4 опциональных аргумента:
 \begin{itemize}
     \item \verb|-c| -- количество посланных пользователем сообщений;
@@ -102,36 +137,44 @@ nc -u -l 9999
 
 Итак, для тестирования, с помощью \verb|netcat|, создаётся локальный UDP-сервер, на который посылаются UDP-пакеты (сообщения) клиентов.
 
-Для начала стоит перейти в папку с тестом:
+\begin{enumerate}
+\item Для начала стоит перейти в папку с тестом:
 \begin{lstlisting}
 $ cd ./tests/
 \end{lstlisting}
 
-Затем в запускается UDP-сервер:
+\item Затем в запускается UDP-сервер:
 \begin{lstlisting}
-$ ./nc_server
+$ ./nc-server
 \end{lstlisting}
 
 \newpage
 
-После чего можно запустить \verb|ps-scanner|:
+\item После чего можно запустить \verb|ps-scanner-1|:
 \begin{lstlisting}
-$ ./sender_test
+$ ./ps-scanner-test 1   # first implementation test
+\end{lstlisting}
+или \verb|ps-scanner-2|:
+\begin{lstlisting}
+$ ./ps-scanner-test 2   # second implementation test
 \end{lstlisting}
 
-Далее стоит запустить \verb|ps-stats|:
+\item Далее стоит запустить \verb|ps-stats|:
 \begin{lstlisting}
-$ ./recipient_test
+$ ./ps-stats
 \end{lstlisting}
 
-После чего можно отправлять различные пакеты на сервер и смотреть как отображается статистика:
+\item После чего можно отправлять различные пакеты на сервер и смотреть как отображается статистика:
 \begin{lstlisting}
-$ ./nc_client
+$ ./nc-client
 \end{lstlisting}
-Также собранные пакеты можно посмотреть:
+
+\item Также собранные пакеты можно посмотреть:
 \begin{lstlisting}
 $ cat /var/log/ps-scanner.log
 \end{lstlisting}
+
+\end{enumerate}
 
 \linespace
 

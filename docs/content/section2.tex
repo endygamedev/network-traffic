@@ -1,7 +1,8 @@
 \section{Сборка}
 
 
-\textbf{Зависимости:}
+\subsubsection*{Зависимости}
+
 \begin{itemize}
 \item Build Essential
 \begin{lstlisting}[language=bash]
@@ -9,7 +10,7 @@ $ sudo apt-get install build-essential
 \end{lstlisting}
 
 \item (\textit{optional}) Linux Tools для профилирования
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}
 $ sudo apt-get install linux-tools-common linux-tools-generic
 $ sudo apt-get install linux-tools-`uname -r`
 \end{lstlisting}
@@ -18,8 +19,8 @@ $ sudo apt-get install linux-tools-`uname -r`
 
 \subsection{Исходники}
 
-Просто для сборки проекта можно использоваться Makefile.
-\begin{lstlisting}[language=bash]
+Для сборки проекта можно использовать Makefile.
+\begin{lstlisting}
 $ git clone https://github.com/endygamedev/network-traffic.git
 $ cd ./network-traffic/src/
 $ make
@@ -28,48 +29,51 @@ $ make
 
 \subsection{deb-пакет}
 
-Для сборки проекта можно воспользоваться deb-пакетом.
+Для сборки проекта можно воспользоваться deb-пакетом. В пакете будет содержаться два варианта реализации сбора статистики (\verb|ps-scanner-1| и \verb|ps-scanner-2|).
 
-\textbf{Установка:}
+\subsubsection*{Установка}
+
 \begin{enumerate}
 \item Клонируем репозиторий с проектом:
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}
 $ git clone https://github.com/endygamedev/network-traffic.git
 \end{lstlisting}
 
 \item Переходим в директорию для создания deb-пакета:
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}
 $ cd ./network-traffic/deb/
 \end{lstlisting}
 
-\item Собираем запускаемые файлы:
-\begin{lstlisting}[language=bash]
+\newpage
+
+\item Собираем запускаемые файлы (\verb|ps-scanner-1|, \verb|ps-scanner-2| и \verb|ps-stats|):
+\begin{lstlisting}
 $ make
 \end{lstlisting}
 
 \item Собираем и устанавливаем deb-пакет:
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}
 $ make install
 \end{lstlisting}
 \end{enumerate}
 
-\newpage
+\subsubsection*{Проверка установки пакета}
 
-\textbf{Проверка установки пакета:}
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}
 $ dpkg -l | grep packet-sniffer
 \end{lstlisting}
 \indent Если всё установилось корректно, то должно получиться следующее сообщение:
-\vspace{-1cm}
+\vspace{-0.8cm}
 \begin{center}
     \includegraphics[scale=0.32]{../assets/check.png}
 \end{center}
 
-\textbf{Удаление:}
-\begin{lstlisting}[language=bash]
+\subsubsection*{Удаление}
+
+\begin{lstlisting}
 $ make clean
 \end{lstlisting}
 или
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}
 $ sudo dpkg -r packet-sniffer
 \end{lstlisting}
