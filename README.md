@@ -43,6 +43,8 @@ $ make remove
 
 Видеопример последовательного запуска программ:
 
+https://user-images.githubusercontent.com/52889537/177835239-221382f0-a868-4d5b-a509-b73f6d971421.mp4
+
 ## TODO
 
 Процесс разработки можно отслеживать в [`TODO.md`](./TODO.md).
