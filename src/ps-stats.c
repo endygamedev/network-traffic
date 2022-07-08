@@ -35,10 +35,10 @@ int main(void)
 
     mqd_t queue;
     packet_message_t msg;
+    msg.count = 0;
+    msg.bytes = 0;
     
     fprintf(stdout, "%sPacket Sniffer: Stats\n\n%s", HEADER, ENDC);
-    fprintf(stdout, "\r%sCount: \t\t Bytes: %s", GREEN, ENDC);
-    fflush(stdout);
     
     if ((queue = mq_open(MQ_NAME,
             O_RDONLY | O_NONBLOCK,
@@ -52,11 +52,14 @@ int main(void)
         /*
          * TODO:
          * - Messages don't have time to be processed by the recipient, so you
-         *   have to wait 5000 microsecond to update.
+         *   have to wait 1 second to update.
          * */
-        usleep(5000);
+        sleep(1);
         
-        mq_receive(queue, (char *)&msg, sizeof(msg), NULL);
+        if (mq_receive(queue, (char *)&msg, sizeof(msg), NULL) == -1) {
+            fprintf(stderr, "%sError: Executing `mq_receive`%s\n", RED, ENDC);
+            exit(EXIT_FAILURE);
+        }
 
         fprintf(stdout, "\r%sCount: %d \t Bytes: %d%s", GREEN, msg.count,
                                                         msg.bytes, ENDC);
