@@ -31,9 +31,9 @@ $ sudo ps-scanner-2 -ni <interface name> -ips <IP source> -ipd <IP dest> -ps <po
 
 Пример запуска \verb|ps-scanner-1| (аналогично для \verb|ps-scanner-2|):
 \begin{lstlisting}
-$ sudo ps-scanner-1 -ni lo -ipd 192.168.1.2 -pd 9999
+$ sudo ps-scanner-1 -ni lo -ipd 127.0.0.1 -pd 9999
 \end{lstlisting}
-В данном примере отбираются только те пакеты с сетевого интерфейса \verb|lo|, у которых IP-адрес назначения -- 192.168.1.2 и порт назначения -- 9999.
+В данном примере отбираются только те пакеты с сетевого интерфейса \verb|lo|, у которых IP-адрес назначения -- 127.0.0.1 и порт назначения -- 9999.
 
 \linespace
 
@@ -79,26 +79,26 @@ tests/
     py-client.py
 \end{lstlisting}
 
-\linespace
+\subsubsection{ps-scanner-test}
 
-\verb|ps-scanner-test|:
 \begin{lstlisting}
 #!/bin/bash
-sudo ps-scanner-$1 -ni lo -ipd $(hostname -I | awk '{print $1}') -pd 9999
+sudo ps-scanner-$1 -ni lo -ipd 127.0.0.1 -pd 9999
 \end{lstlisting}
-Данный скрипт принимает 1 обязательный позиционный аргумент, который определяет какую реализацию сбора статистики необходимос запустить (1 или 2). Запускается сканер на сетевом интерфейса \verb|lo| (Loopback interface), который отбирает только те пакеты, у которых IP-адрес назначения \verb|localhost|, а порт назначения \verb|9999|.
+Данный скрипт принимает 1 обязательный позиционный аргумент, который определяет какую реализацию сбора статистики необходимос запустить (1 или 2). Запускается сканер на сетевом интерфейса \verb|lo| (Loopback interface), который отбирает только те пакеты, у которых IP-адрес назначения \verb|127.0.0.1|, а порт назначения \verb|9999|.
 
 \linespace
 
 Также если не собирать \verb|deb|-пакет, то можно протестировать данную утилиту из исходников:
 \begin{lstlisting}
 #!/bin/bash
-sudo ../src/ps-scanner-$1 -ni lo -ipd $(hostname -I | awk '{print $1}') -pd 9999
+sudo ../src/ps-scanner-$1 -ni lo -ipd 127.0.0.1 -pd 9999
 \end{lstlisting}
 
 \newpage
 
-\verb|ps-stats|:
+\subsubsection{ps-stats}
+
 \begin{lstlisting}
 #!/bin/bash
 sudo ps-stats
@@ -113,42 +113,51 @@ sudo ps-stats
 sudo ../src/ps-stats
 \end{lstlisting}
 
-\linespace
+\subsubsection{nc-server}
 
-\verb|nc-server|:
+Данная утилита принимает 2 опциональных аргумента:
+\begin{itemize}
+    \item \verb|-s| -- IP-адрес создаваемого сервера \footnotesize(default: 127.0.0.1)\normalsize;
+    \item \verb|-p| -- порт создаваемого сервера \footnotesize(default: 9999)\normalsize.
+\end{itemize}
+Если не задавать аргументы, то сервер будет создан на: \verb|127.0.0.1|:\verb|9999|.
+
 \begin{lstlisting}
 #!/bin/bash
-nc -u -l 9999
+nc -u -l $ip_server $port
 \end{lstlisting}
-С помощью утилиты \verb|netcat| запускается UDP-сервер на порте 9999, который ожидает сообщений от клиентов.
+С помощью утилиты \verb|netcat| запускается UDP-сервер на\\
+\verb|$ip_address|:\verb|$port|, который ожидает сообщений от клиентов.
 
-\linespace
+\subsubsection{nc-client}
 
-\verb|nc-client|:\\
 Данная утилита принимает 4 опциональных аргумента:
 \begin{itemize}
-    \item \verb|-c| -- количество посланных пользователем сообщений;
-    \item \verb|-m| -- текст сообщения, которое будет послано;
-    \item \verb|-s| -- IP-адрес сервера;
-    \item \verb|-p| -- порт сервера.
+    \item \verb|-c| -- количество посланных пользователем сообщений \footnotesize(default: 10)\normalsize;
+    \item \verb|-m| -- текст сообщения, которое будет послано \footnotesize(default: "Hello")\normalsize;
+    \item \verb|-s| -- IP-адрес сервера \footnotesize(default: 127.0.0.1)\normalsize;
+    \item \verb|-p| -- порт сервера \footnotesize(default: 9999)\normalsize.
 \end{itemize}
-То есть после запуска данной программы на сервер \verb|$count|-раз отправится сообщение \verb|$message|.
+То есть после запуска данной программы на сервер \verb|$count|-раз отправится сообщение \verb|$message|. Данные сообщения будут посланы с IP-адреса \verb|127.0.0.1|.
 
-\newpage
+\subsubsection{py-client.py}
 
-\verb|py-client.py|:\\
-Также вместо утилиты \verb|nc-client| можно воспользоваться данной утилитой. Данная утилита принимает 4 опциональных аргумента:
+Также вместо утилиты \verb|nc-client| можно воспользоваться данной утилитой. Данная утилита принимает 6 опциональных аргумента:
 \begin{itemize}
-    \item \verb|-c| -- количество посланных пользователем сообщений;
-    \item \verb|-m| -- текст сообщения, которое будет послано;
-    \item \verb|-s| -- IP-адрес сервера;
-    \item \verb|-p| -- порт сервера.
+    \item \verb|-c| -- количество посланных пользователем сообщений \footnotesize(default: 10)\normalsize;
+    \item \verb|-m| -- текст сообщения, которое будет послано \footnotesize(default: "Hello")\normalsize;
+    \item \verb|-ips| -- IP-адрес сервера \footnotesize(default: 127.0.0.1)\normalsize;
+    \item \verb|-ps| -- порт сервера \footnotesize(default: 9999)\normalsize;
+    \item \verb|-ipc| -- IP-адрес клиента \footnotesize(default: 127.0.0.1)\normalsize;
+    \item \verb|-pc| -- порт клиента \footnotesize(default: 9998)\normalsize.
 \end{itemize}
 То есть после запуска данной программы на сервер \verb|count|-раз отправится сообщение \verb|message|.
 
 \subsection{Тесты}
 
-Итак, для тестирования, с помощью \verb|netcat|, создаётся локальный UDP-сервер, на который посылаются UDP-пакеты (сообщения) клиентов.
+\subsubsection{Кейс 1}
+
+Итак, для тестирования, с помощью \verb|netcat|, создаётся локальный UDP-сервер \verb|127.0.0.1:9999|, на который посылаются UDP-пакеты (сообщения) клиентов с IP-адреса \verb|127.0.0.1|.
 
 \begin{enumerate}
 \item Для начала стоит перейти в папку с тестом:
@@ -158,7 +167,7 @@ $ cd ./tests/
 
 \item Затем в запускается UDP-сервер:
 \begin{lstlisting}
-$ ./nc-server
+$ ./nc-server -s 127.0.0.1 -p 9999
 \end{lstlisting}
 
 \item После чего можно запустить \verb|ps-scanner-1|:
@@ -172,18 +181,18 @@ $ ./ps-scanner-test 2   # second implementation test
 
 \item Далее стоит запустить \verb|ps-stats|:
 \begin{lstlisting}
-$ ./ps-stats
+$ ./ps-stats-test
 \end{lstlisting}
 
 \newpage
 
-\item После чего можно отправлять различные пакеты на сервер и смотреть как отображается статистика:
+\item После чего можно отправлять различные пакеты на сервер и смотреть как отображается статистика. В данном случае будет 20 раз отправлен пакет с сообщением \verb|"Hello"|:
 \begin{lstlisting}
-$ ./nc-client
+$ ./nc-client -c 20
 \end{lstlisting}
 или
 \begin{lstlisting}
-$ ./py-client
+$ ./py-client.py -ips 127.0.0.1 -ps 9999 -ipc 127.0.0.1 -pc 9998 -c 20
 \end{lstlisting}
 
 \item Также собранные пакеты можно посмотреть:
@@ -196,3 +205,100 @@ $ cat /var/log/ps-scanner.log
 \linespace
 
 Видеопример последовательного запуска программ предстален в репозитории GitHub.
+
+\subsubsection{Кейс 2}
+
+Для данного тест-кейса потребуется создать два виртуальных интерфейса \verb|eth10| и \verb|eth11|.
+
+Это можно сделать следующим образом:
+\begin{enumerate}
+
+\item Устанавливаем модуль \verb|dummy| для ядра Linux:
+\begin{lstlisting}
+$ sudo modprobe dummy
+\end{lstlisting}
+
+\item Проверяем что он установился корректно:
+\begin{lstlisting}
+$ sudo lsmod | grep dummy
+dummy                  16384  0 
+\end{lstlisting}
+
+\item Создаём \verb|dummy| сетевой интерфейс -- \verb|eth10|:
+\begin{lstlisting}
+$ sudo ip link add eth10 type dummy
+\end{lstlisting}
+
+\item Изменяем MAC-адрес данного интерфейса:
+\begin{lstlisting}
+$ sudo ifconfig eth10 hw ether 00:22:22:ff:ff:ff
+\end{lstlisting}
+
+\newpage
+
+\item Изменяем MAC-адрес данного интерфейса:
+\begin{lstlisting}
+$ sudo ip addr add 10.1.0.1/24 brd + dev eth10 label eth10:0
+\end{lstlisting}
+\end{enumerate}
+
+\linespace
+
+После чего виртуальный сетевой интерфейс \verb|eth10| будет создан.
+
+\linespace
+
+Аналогично поступаем с \verb|eth11| только указываем у него IP-адрес: \verb|10.1.0.2/24|.
+
+\linespace
+
+Далее создадим UDP-сервер на \verb|10.1.0.1:9999| и будем отправять пакеты с \verb|10.1.0.2:9999|.
+
+\begin{enumerate}
+\item Для начала стоит перейти в папку с тестом:
+\begin{lstlisting}
+$ cd ./tests/
+\end{lstlisting}
+
+\item Затем в запускается UDP-сервер:
+\begin{lstlisting}
+$ ./nc-server -s 10.1.0.1 -p 9999
+\end{lstlisting}
+
+\item После чего можно запустить \verb|ps-scanner-1|:
+\begin{lstlisting}
+$ sudo ../src/ps-scanner-test-1 -ni lo -ips 10.1.0.2 -ipd 10.1.0.1 -pd 9999
+\end{lstlisting}
+или \verb|ps-scanner-2|:
+\begin{lstlisting}
+$ sudo ../src/ps-scanner-test-2 -ni lo -ips 10.1.0.2 -ipd 10.1.0.1 -pd 9999
+\end{lstlisting}
+
+\item Далее стоит запустить \verb|ps-stats|:
+\begin{lstlisting}
+$ ./ps-stats-test
+\end{lstlisting}
+
+\item После чего можно отправлять различные пакеты на сервер и смотреть как отображается статистика. В данном случае будет 20 раз отправлен пакет с сообщением \verb|"Hello"|:
+\begin{lstlisting}
+$ ./py-client.py -ips 10.1.0.1 -ps 9999 -ipc 10.1.0.2 -pc 9999 -c 20
+\end{lstlisting}
+
+\newpage
+
+\item Также собранные пакеты можно посмотреть:
+\begin{lstlisting}
+$ cat /var/log/ps-scanner.log
+\end{lstlisting}
+\end{enumerate}
+
+\linespace
+
+Для того чтобы удалить созданные виртуальные сетевые интерфейсы нужно сделать следующее:
+\begin{lstlisting}
+$ sudo ip addr del 10.1.0.1/24 brd + dev eth10 label eth10:0
+$ sudo ip addr del 10.1.0.2/24 brd + dev eth10 label eth11:0
+$ sudo ip link delete eth10 type dummy
+$ sudo ip link delete eth11 type dummy
+$ sudo rmmod dummy
+\end{lstlisting}

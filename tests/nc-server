@@ -1,5 +1,18 @@
 #!/bin/bash
 GREEN='\033[32m'
 NC='\033[0m'
-echo -e "${GREEN}Server is ready ...${NC}"
-nc -u -l 9999
+
+ip_server=127.0.0.1
+port=9999
+
+while getopts s:p: flag
+do
+    case "${flag}" in
+        s) ip_server=${OPTARG};;
+        p) port=${OPTARG};;
+    esac
+done
+
+echo -e "${GREEN}${ip_server}:${port} server is ready...${NC}"
+
+nc -u -l $ip_server $port

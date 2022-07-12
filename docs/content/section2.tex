@@ -14,6 +14,11 @@ $ sudo apt-get install build-essential
 $ sudo apt-get install linux-tools-common linux-tools-generic
 $ sudo apt-get install linux-tools-`uname -r`
 \end{lstlisting}
+
+\item (\textit{optional}) Python 3 для тестирования
+\begin{lstlisting}
+$ sudo apt-get install python3
+\end{lstlisting}
 \end{itemize}
 
 
@@ -39,12 +44,12 @@ $ make
 $ git clone https://github.com/endygamedev/network-traffic.git
 \end{lstlisting}
 
+\newpage
+
 \item Переходим в директорию для создания deb-пакета:
 \begin{lstlisting}
 $ cd ./network-traffic/deb/
 \end{lstlisting}
-
-\newpage
 
 \item Собираем запускаемые файлы (\verb|ps-scanner-1|, \verb|ps-scanner-2| и \verb|ps-stats|):
 \begin{lstlisting}

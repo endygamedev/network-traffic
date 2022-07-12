@@ -57,10 +57,8 @@ typedef struct {
 
 
 FILE *logfile;
-int udp_count, iphdrlen, bytes;
+int udp_count, bytes;
 
-struct sockaddr saddr;
-struct sockaddr_in source, dest;
 char *interface = "";
 struct correct_packets cp;
 
@@ -238,6 +236,7 @@ void *get_data()
 {
     int sock_r, saddr_len;
     struct ifreq ifr;
+    struct sockaddr saddr;
     struct sockaddr_ll sll;
     unsigned char *buffer = (unsigned char *)malloc(BYTES);
 
@@ -305,8 +304,10 @@ void *get_data()
  * */
 void packet_information(unsigned char *buffer)
 {
+    struct sockaddr_in source, dest;
     struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
-    iphdrlen = ip->ihl*4;
+    char ip_source[16], ip_dest[16];
+    int iphdrlen = ip->ihl*4;
     time_t end = clock();
 
     memset(&source, 0, sizeof(source));
@@ -314,8 +315,8 @@ void packet_information(unsigned char *buffer)
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = ip->daddr;
     
-    char *ip_source = inet_ntoa(source.sin_addr);
-    char *ip_dest = inet_ntoa(dest.sin_addr);
+    strcpy(ip_source, inet_ntoa(source.sin_addr));
+    strcpy(ip_dest, inet_ntoa(dest.sin_addr));
 
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
 

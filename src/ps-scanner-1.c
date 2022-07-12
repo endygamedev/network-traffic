@@ -57,13 +57,11 @@ typedef struct {
 
 
 FILE *logfile;
-int iphdrlen, bytes;
 
-struct sockaddr saddr;
-struct sockaddr_in source, dest;
 char *interface = "";
 struct correct_packets cp;
 
+int bytes;
 int fd_count[2];
 int fd_data[2];
 
@@ -163,7 +161,6 @@ int main(int argc, char *argv[])
     fprintf(stdout, "|-Port destination: \t %s\n",
                     cp.port_dest != -1 ? port_dest : "None");
 
-
     /* Checking the filters */
     check_ip_record(cp.ip_source);
     check_ip_record(cp.ip_dest);
@@ -248,6 +245,7 @@ void *get_data()
 {
     int sock_r, saddr_len;
     struct ifreq ifr;
+    struct sockaddr saddr;
     struct sockaddr_ll sll;
     unsigned char *buffer = (unsigned char *)malloc(BYTES);
 
@@ -314,19 +312,20 @@ void *get_data()
  * Writes information about filtered packets into the log file.
  * */
 void packet_information(unsigned char *buffer)
-{
+{   
+    struct sockaddr_in source, dest;
+    char ip_source[16], ip_dest[16];
     struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
-    iphdrlen = ip->ihl*4;
-    int num = 0, bytes = 0;
+    int num = 0, bytes = 0, iphdrlen = ip->ihl*4;
     time_t end = clock();
 
     memset(&source, 0, sizeof(source));
     source.sin_addr.s_addr = ip->saddr;
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = ip->daddr;
-    
-    char *ip_source = inet_ntoa(source.sin_addr);
-    char *ip_dest = inet_ntoa(dest.sin_addr);
+
+    strcpy(ip_source, inet_ntoa(source.sin_addr));
+    strcpy(ip_dest, inet_ntoa(dest.sin_addr));
 
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
 
