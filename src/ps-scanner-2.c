@@ -319,7 +319,7 @@ void packet_information(unsigned char *buffer)
 
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
 
-    int data_size = ntohs(udp->len);
+    int data_size = ntohs(udp->len) - UDPHDR_SIZE;
     int port_source = ntohs(udp->source);
     int port_dest = ntohs(udp->dest);
 
