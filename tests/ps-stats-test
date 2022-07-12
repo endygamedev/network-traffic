@@ -1,5 +1,5 @@
 #!/bin/bash
 
-# sudo ../src/ps-stats
+sudo ../src/ps-stats
 # or (if you install `.deb`-package)
-sudo ps-stats
+# sudo ps-stats

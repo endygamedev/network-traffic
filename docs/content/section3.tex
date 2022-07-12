@@ -76,6 +76,7 @@ tests/
     nc-server
     ps-scanner-test
     ps-stats-test
+    py-client.py
 \end{lstlisting}
 
 \linespace
@@ -95,7 +96,7 @@ sudo ps-scanner-$1 -ni lo -ipd $(hostname -I | awk '{print $1}') -pd 9999
 sudo ../src/ps-scanner-$1 -ni lo -ipd $(hostname -I | awk '{print $1}') -pd 9999
 \end{lstlisting}
 
-\linespace
+\newpage
 
 \verb|ps-stats|:
 \begin{lstlisting}
@@ -104,7 +105,7 @@ sudo ps-stats
 \end{lstlisting}
 В данном скрипте запускается вывод собранной статистики \verb|ps-scanner|.
 
-\newpage
+\linespace
 
 Также если не собирать \verb|deb|-пакет, то можно протестировать данную утилиту из исходников:
 \begin{lstlisting}
@@ -133,6 +134,18 @@ nc -u -l 9999
 \end{itemize}
 То есть после запуска данной программы на сервер \verb|$count|-раз отправится сообщение \verb|$message|.
 
+\newpage
+
+\verb|py-client.py|:\\
+Также вместо утилиты \verb|nc-client| можно воспользоваться данной утилитой. Данная утилита принимает 4 опциональных аргумента:
+\begin{itemize}
+    \item \verb|-c| -- количество посланных пользователем сообщений;
+    \item \verb|-m| -- текст сообщения, которое будет послано;
+    \item \verb|-s| -- IP-адрес сервера;
+    \item \verb|-p| -- порт сервера.
+\end{itemize}
+То есть после запуска данной программы на сервер \verb|count|-раз отправится сообщение \verb|message|.
+
 \subsection{Тесты}
 
 Итак, для тестирования, с помощью \verb|netcat|, создаётся локальный UDP-сервер, на который посылаются UDP-пакеты (сообщения) клиентов.
@@ -148,8 +161,6 @@ $ cd ./tests/
 $ ./nc-server
 \end{lstlisting}
 
-\newpage
-
 \item После чего можно запустить \verb|ps-scanner-1|:
 \begin{lstlisting}
 $ ./ps-scanner-test 1   # first implementation test
@@ -164,9 +175,15 @@ $ ./ps-scanner-test 2   # second implementation test
 $ ./ps-stats
 \end{lstlisting}
 
+\newpage
+
 \item После чего можно отправлять различные пакеты на сервер и смотреть как отображается статистика:
 \begin{lstlisting}
 $ ./nc-client
+\end{lstlisting}
+или
+\begin{lstlisting}
+$ ./py-client
 \end{lstlisting}
 
 \item Также собранные пакеты можно посмотреть:

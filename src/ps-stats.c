@@ -39,6 +39,7 @@ int main(void)
     msg.bytes = 0;
     
     fprintf(stdout, "%sPacket Sniffer: Stats\n\n%s", HEADER, ENDC);
+    fprintf(stdout, "\r\33[2K\n");
     
     if ((queue = mq_open(MQ_NAME,
             O_RDONLY | O_NONBLOCK,
@@ -47,22 +48,25 @@ int main(void)
         fprintf(stderr, "%sError: Executing `mq_open`%s\n", RED, ENDC);
         exit(EXIT_FAILURE);
     }
-
+    
     while (1) {
         /*
          * TODO:
          * - Messages don't have time to be processed by the recipient, so you
-         *   have to wait 1 second to update.
+         *   have to wait 5000 millisecond to update.
          * */
-        sleep(1);
+        usleep(5000);
         
         if (mq_receive(queue, (char *)&msg, sizeof(msg), NULL) == -1) {
-            fprintf(stderr, "%sError: Executing `mq_receive`%s\n", RED, ENDC);
-            exit(EXIT_FAILURE);
+            fprintf(stdout, "\r%s%sWaiting packages...%s\n", BLINK, YELLOW, ENDC);
+        } else {
+            fprintf(stdout, "\r\33[2K\n");
         }
 
         fprintf(stdout, "\r%sCount: %d \t Bytes: %d%s", GREEN, msg.count,
                                                         msg.bytes, ENDC);
+
+        fprintf(stdout, "\033[A");
         
         fflush(stdout);
     }

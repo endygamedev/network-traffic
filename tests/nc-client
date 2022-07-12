@@ -1,5 +1,5 @@
 #!/bin/bash
-ip_server=$(hostname -I | awk '{print $1}')
+ip_server=127.0.0.1
 port=9999
 message="Hello"
 count=10

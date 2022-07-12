@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 /* Raw Socket */
 #include <sys/socket.h>
@@ -34,6 +35,9 @@
 /* Maxium number of messages in message queue */
 #define MAX_MESSAGES 1
 
+/* UDP header size */
+#define UDPHDR_SIZE 8
+
 /* Message queue name (identificator) */
 #define MQ_NAME "/mq_stats_queue"
 
@@ -60,11 +64,14 @@ struct sockaddr_in source, dest;
 char *interface = "";
 struct correct_packets cp;
 
+time_t start;
+
 
 int main(int argc, char *argv[])
 {
-    struct if_nameindex *if_nidxs, *intf;
+    start = clock();
 
+    struct if_nameindex *if_nidxs, *intf;
     if_nidxs = if_nameindex();
 
     cp.ip_source = "";
@@ -229,7 +236,7 @@ void *send_stats()
  * */
 void *get_data()
 {
-    int sock_r, saddr_len, buflen;
+    int sock_r, saddr_len;
     struct ifreq ifr;
     struct sockaddr_ll sll;
     unsigned char *buffer = (unsigned char *)malloc(BYTES);
@@ -246,7 +253,7 @@ void *get_data()
         exit(EXIT_FAILURE);
     }
 
-    sock_r = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    sock_r = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
 
     if (sock_r < 0) {
         fprintf(stderr, "%sError: Can't open socket%s\n", RED, ENDC);
@@ -262,7 +269,7 @@ void *get_data()
 
     sll.sll_family = AF_PACKET;
     sll.sll_ifindex = ifr.ifr_ifindex;
-    sll.sll_protocol = htons(ETH_P_ALL);
+    sll.sll_protocol = htons(ETH_P_IP);
     
     if (bind(sock_r, (struct sockaddr *)&sll, sizeof(sll)) == -1) {
         fprintf(stderr, "%sError: Can't bind socket to specific interface%s\n",
@@ -274,17 +281,15 @@ void *get_data()
 
     while (1) {
         saddr_len = sizeof(saddr);
-        buflen = recvfrom(sock_r, buffer, BYTES, 0, &saddr,
-                                                    (socklen_t *)&saddr_len);
 
-        if (buflen < 0) {
+        if (recvfrom(sock_r, buffer, BYTES, 0, &saddr, (socklen_t *)&saddr_len) < 0) {
             fprintf(stderr, "%sError: Error while reading recvfrom function%s\n",
                                                                     RED, ENDC);
             exit(EXIT_FAILURE);
         }
 
-        fflush(logfile);
         data_process(buffer);
+        fflush(logfile);
     }
 
     close(sock_r);
@@ -302,6 +307,7 @@ void packet_information(unsigned char *buffer)
 {
     struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
     iphdrlen = ip->ihl*4;
+    time_t end = clock();
 
     memset(&source, 0, sizeof(source));
     source.sin_addr.s_addr = ip->saddr;
@@ -322,23 +328,8 @@ void packet_information(unsigned char *buffer)
         (cp.port_source == -1 || cp.port_source == port_source) &&
         (cp.port_dest == -1 || cp.port_dest == port_dest)) {
 
-
-        fprintf(logfile, "\n*******************UDP Packet********************");
-
-        fprintf(logfile, "\nNetwork Interface: %s\n", interface);
-
-        fprintf(logfile, "\nIP Header\n");
-        fprintf(logfile, "\t|-Source IP: %s\n", ip_source);
-        fprintf(logfile, "\t|-Destination IP: %s\n", ip_dest);
-
-        fprintf(logfile, "\nUDP Header\n");
-        fprintf(logfile, "\t|-Source Port: %d\n", port_source);
-        fprintf(logfile, "\t|-Destination Port: %d\n", port_dest);
-    
-        fprintf(logfile, "\nData\n");
-        fprintf(logfile, "\t|-Datagram size: %d\n", data_size);
-        
-        fprintf(logfile, "************************************************\n\n\n");
+        fprintf(logfile, "%f \t Interface: %s \t Source: %s \t Destination: %s \t Info: %d->%d Len=%d\n",
+                (double)(end-start)/CLOCKS_PER_SEC, interface, ip_source, ip_dest, port_source, port_dest, data_size);
         
         udp_count++;
         bytes += data_size;
