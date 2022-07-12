@@ -43,7 +43,7 @@ $ make remove
 
 Видеопример последовательного запуска программ:
 
-https://user-images.githubusercontent.com/52889537/177835239-221382f0-a868-4d5b-a509-b73f6d971421.mp4
+https://user-images.githubusercontent.com/52889537/178481081-3200b54e-4cb2-407d-b983-f3d0a9e379b6.mp4
 
 ## TODO
 
