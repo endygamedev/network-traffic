@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 
 /* POSIX Message Queue */
 #include <fcntl.h>
@@ -23,9 +24,18 @@ typedef struct {
     int bytes;
 } packet_message_t;
 
+static volatile int running = 1;
+
+static void sig_handler()
+{
+    running = 0;
+}
+
 
 int main(void)
 {
+    signal(SIGINT, sig_handler);
+
     struct mq_attr attributes = {
         .mq_flags = 0,
         .mq_maxmsg = 1,
@@ -35,6 +45,7 @@ int main(void)
 
     mqd_t queue;
     packet_message_t msg;
+    
     msg.count = 0;
     msg.bytes = 0;
     
@@ -49,11 +60,11 @@ int main(void)
         exit(EXIT_FAILURE);
     }
     
-    while (1) {
+    while (running) {
         /*
          * TODO:
          * - Messages don't have time to be processed by the recipient, so you
-         *   have to wait 5000 millisecond to update.
+         *   have to wait 5000 milliseconds to update.
          * */
         usleep(5000);
         
@@ -61,6 +72,10 @@ int main(void)
             fprintf(stdout, "\r%s%sWaiting packages...%s\n", BLINK, YELLOW, ENDC);
         } else {
             fprintf(stdout, "\r\33[2K\n");
+        }
+       
+        if (msg.count == 0) {
+            fprintf(stdout, "\r\33[2K");
         }
 
         fprintf(stdout, "\r%sCount: %d \t Bytes: %d%s", GREEN, msg.count,
@@ -70,9 +85,11 @@ int main(void)
         
         fflush(stdout);
     }
+    
+    fprintf(stdout, "\033[B\n");
+    fflush(stdout);
 
     mq_close(queue);
-    mq_unlink(MQ_NAME);
 
     return EXIT_SUCCESS;
 }

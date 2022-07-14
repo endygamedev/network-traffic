@@ -57,7 +57,7 @@ typedef struct {
 
 
 FILE *logfile;
-int udp_count, bytes;
+int udp_count, bytes, buf_len;
 
 char *interface = "";
 struct correct_packets cp;
@@ -203,6 +203,9 @@ void *send_stats()
     mqd_t queue;
     packet_message_t msg;
     
+    msg.count = 0;
+    msg.bytes = 0;
+    
     if ((queue = mq_open(MQ_NAME, O_CREAT | O_WRONLY,
                          S_IRUSR | S_IWUSR,
                          &attributes)) == -1) {
@@ -223,7 +226,6 @@ void *send_stats()
     }
 
     mq_close(queue);
-    mq_unlink(MQ_NAME);
 
     pthread_exit(0);
 }
@@ -280,8 +282,9 @@ void *get_data()
 
     while (1) {
         saddr_len = sizeof(saddr);
+        buf_len = recvfrom(sock_r, buffer, BYTES, 0, &saddr, (socklen_t *)&saddr_len);
 
-        if (recvfrom(sock_r, buffer, BYTES, 0, &saddr, (socklen_t *)&saddr_len) < 0) {
+        if (buf_len < 0) {
             fprintf(stderr, "%sError: Error while reading recvfrom function%s\n",
                                                                     RED, ENDC);
             exit(EXIT_FAILURE);
@@ -305,18 +308,27 @@ void *get_data()
 void packet_information(unsigned char *buffer)
 {
     struct sockaddr_in source, dest;
-    struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
+    struct sockaddr_in cp_source, cp_dest;
     char ip_source[16], ip_dest[16];
+    
+    struct iphdr *ip = (struct iphdr *)(buffer + sizeof(struct ethhdr));
     int iphdrlen = ip->ihl*4;
     time_t end = clock();
 
     memset(&source, 0, sizeof(source));
     source.sin_addr.s_addr = ip->saddr;
+    
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = ip->daddr;
     
-    strcpy(ip_source, inet_ntoa(source.sin_addr));
-    strcpy(ip_dest, inet_ntoa(dest.sin_addr));
+    memset(&cp_source, 0, sizeof(cp_source));
+    inet_pton(AF_INET, cp.ip_source, &(cp_source.sin_addr));
+    
+    memset(&cp_dest, 0, sizeof(cp_dest));
+    inet_pton(AF_INET, cp.ip_dest, &(cp_dest.sin_addr));
+    
+    strncpy(ip_source, inet_ntoa(source.sin_addr), sizeof(ip_source));
+    strncpy(ip_dest, inet_ntoa(dest.sin_addr), sizeof(ip_dest));
 
     struct udphdr *udp = (struct udphdr *)(buffer + iphdrlen + sizeof(struct ethhdr));
 
@@ -324,16 +336,17 @@ void packet_information(unsigned char *buffer)
     int port_source = ntohs(udp->source);
     int port_dest = ntohs(udp->dest);
 
-    if ((!strcmp(cp.ip_source, "") || !strcmp(cp.ip_source, ip_source)) &&
-        (!strcmp(cp.ip_dest, "") || !strcmp(cp.ip_dest, ip_dest)) &&
-        (cp.port_source == -1 || cp.port_source == port_source) &&
-        (cp.port_dest == -1 || cp.port_dest == port_dest)) {
+    if ((cp_source.sin_addr.s_addr == 0 || cp_source.sin_addr.s_addr == source.sin_addr.s_addr) &&
+       (cp_dest.sin_addr.s_addr == 0 || cp_dest.sin_addr.s_addr == dest.sin_addr.s_addr) &&
+       (cp.port_source == -1 || cp.port_source == port_source) &&
+       (cp.port_dest == -1 || cp.port_dest == port_dest)) {
 
-        fprintf(logfile, "%f \t Interface: %s \t Source: %s \t Destination: %s \t Info: %d->%d Len=%d\n",
-                (double)(end-start)/CLOCKS_PER_SEC, interface, ip_source, ip_dest, port_source, port_dest, data_size);
+        fprintf(logfile, "%f \t Interface: %s \t Source: %s \t Destination: %s \t Length: %d \t Info: %d->%d Len=%d\n",
+                (double)(end-start)/CLOCKS_PER_SEC, interface, ip_source, ip_dest,
+                buf_len, port_source, port_dest, data_size);
         
         udp_count++;
-        bytes += data_size;
+        bytes += buf_len;
     }
 }
 
